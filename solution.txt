@@ -1,0 +1,114 @@
+Problem: 1757. Recyclable and Low Fat Products
+
+Intuition:
+This problem is straightforward, we only have to filter out the id of rows where
+both low_fats and recyclable columns are set to 'Y'
+
+Approach:
+Simply extract the rows that meet the condition using WHERE statement
+
+Solution:
+SELECT product_id FROM Products
+WHERE low_fats='Y' AND recyclable='Y';
+
+
+Problem: 2356. Number of Unique Subjects Taught by Each Teacher
+
+Intuition:
+This problem needs us to compute the number of "unique" subjects told by each teacher.
+When seeing the word "unique", we immediately come up with DISTINCT statement. Also,
+because we want to compute for each teacher, we certainly have to use GROUP BY.
+
+Approach:
+Firstly, since we have to compute value for each teacher, we use `GROUP BY teacher_id`.
+Next, as we can generate the unique subjects by `DISTINCT subject_id`. Then, we compute
+the number by `COUNT(DISTINCT subject_id)`
+
+Solution:
+SELECT teacher_id, COUNT(distinct subject_id) as cnt FROM Teacher
+GROUP BY teacher_id;
+
+
+Problem: 1741. Find Total Time Spent by Each Employee
+
+Intuition:
+This problem needs us to compute the total time each employee spent in the office for 
+each day. And when it comes to `each`, we immediately come up with GROUP BY statement.
+And for total, we could use SUM.
+
+Approach:
+Firstly, as we have to compute based on employee and date, so we have to use `GROUP BY emp_id, event_day`.
+Next, we can directly use aggregate function SUM as `SUM(out_time-in_time)`
+
+Solution:
+SELECT event_day as day, emp_id, SUM(out_time-in_time) as total_time FROM Employees
+GROUP BY emp_id, event_day;
+
+
+Problem: 1693. Daily Leads and Partners
+
+Intuition: 
+This problem needs us to compute the unique leads and partners for each date of each make
+name. Surely, we come up with DISTINCT, GROUP BY, COUNT statements.
+
+Approach:
+Firstly, as we have to compute based on date and make name, we use `GROUP BY date_id, make_name`.
+Next, we can filter out distinct valus of leads and partners using `DISTINCT lead_id` and 
+`DISTINCT partner_id`. Eventually, we make use of aggregate function COUNT as `COUNT(DISTINCT lead_id)`
+and `COUNT(DISTINCT partner_id)` to compute the results.
+
+Solution:
+SELECT date_id, make_name, COUNT(distinct lead_id) as unique_leads, COUNT(distinct partner_id) as unique_partners FROM DailySales
+GROUP BY date_id, make_name
+
+
+Problem: 1393. Capital Gain/Loss
+
+Intuition:
+This problem needs us to compute the total gain/loss for each stock. So we must have to separate 
+buy operation and sell operation. Also, because we have to compute each stock respectively, we
+have to use GROUP BY.
+
+Approach:
+One of the important thing to notice is that when computing total gain/loss, we don't have to care
+about the order of trading under this circumstances. So the strategy becomes: total sell price - 
+total sell price. Firstly, we gather the total sell price for each stock using 
+
+	SELECT stock_name, SUM(price) as sell_total FROM Stocks
+	WHERE operation='Sell'
+	GROUP BY stock_name, operation
+
+This would serve as a subquery. Next we do the same thing for total buy price
+
+	SELECT stock_name, sum(price) as buy_total FROM Stocks
+	WHERE operation='Buy'
+	GROUP BY stock_name, operation
+	
+Once we have these two queries, we can join them and compute sell_total-buy_total
+
+Solution:
+SELECT s.stock_name, s.sell_total-SUM(price) as capital_gain_loss FROM Stocks as b
+	INNER JOIN (
+		SELECT stock_name, SUM(price) as sell_total FROM Stocks
+		WHERE operation='Sell'
+		GROUP BY stock_name, operation
+    ) AS s ON b.stock_name = s.stock_name
+WHERE operation='Buy'
+GROUP BY stock_name, operation;
+
+Modified Solution:
+SELECT stock_name, 
+	SUM(
+		CASE WHEN operation = 'Buy' THEN
+			-price
+		ELSE
+			price
+		END
+	) AS capital_gain_loss
+FROM Stocks
+GROUP BY stock_name;
+
+Modified Solution Explained:
+In the modified solution, instead of separating the buy and sell operation using subquery,
+it makes use of CASE WHEN statement. This have the same results that subquery have, but it
+prevents from creating another tables which take more time. And it makes the code more succinct.
