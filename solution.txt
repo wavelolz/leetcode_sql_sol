@@ -112,3 +112,103 @@ Modified Solution Explained:
 In the modified solution, instead of separating the buy and sell operation using subquery,
 it makes use of CASE WHEN statement. This have the same results that subquery have, but it
 prevents from creating another tables which take more time. And it makes the code more succinct.
+
+
+Problem: 1795. Rearrange Products Table
+
+Intuition:
+When I first read this question, I found out that it's all about transpose. In programming language
+like SAS, Python, and R, they all have great function to handle transpose directly. However, there
+isn't such a function in MySQL, so we have to carefully create each column ourselves.
+
+Approach:
+Firstly, we notice that there're only 3 stores, so we can use `SELECT 'store1'` to create the
+`store` column. Here, we can find out that running the statement `SELECT p.product_id, "store1" 
+as store, p.store1 as price FROM Products as p` actually returns the result that we want for each
+store. So our next task would be stacking them up. Here, we can use `UNION ALL`. Eventually, we 
+use `WHERE` statement to filter out rows that contain None value
+
+Solution:
+SELECT * FROM (
+	SELECT p.product_id, "store1" as store, p.store1 as price FROM Products as p
+	UNION ALL
+	SELECT p.product_id, "store2" as store, p.store2 as price FROM Products as p
+	UNION ALL
+	SELECT p.product_id, "store3" as store, p.store3 as price FROM Products as p
+) as r
+WHERE r.price != 'None';
+
+
+Problem: 1683. Invalid Tweets
+
+Intuition:
+It's straight forward
+
+Approach:
+Consider using `LENGTH` statement
+
+Solution:
+SELECT tweet_id FROM Tweets
+WHERE LENGTH(content) > 15;
+
+
+Problem: 1587. Bank Account Summary II
+
+Intuition:
+It contains two tables, so we surely have to use join operation. And it wants to compute
+the balance for each person, so the combined use of `GROUP BY` and `SUM` is necessary.
+
+Approach:
+First, we have to consider what kind of join we have to use. For this problem, we can use
+both inner join or left join (table Transactions would be left table). However, in real
+world scenarios, I think it's more preferred to use left join because there might contains 
+transactions that doesn't match with the account name. Using left join would ensure that 
+no transaction records lost. So firstly, we performed left join operation
+
+	SELECT * FROM Transactions as t
+	LEFT JOIN Users as u
+	ON t.account = u.account
+
+Next, we have to compute the total balance for each person, so the query becomes
+
+	SELECT u.name, SUM(t.amount) as balance FROM Transactions as t
+	LEFT JOIN Users as u
+	ON t.account = u.account
+	GROUP BY u.name
+
+Eventually, we can filter the account that has balance>10000 using subquery
+
+Solution:
+SELECT r.name, r.balance FROM (
+	SELECT u.name, SUM(t.amount) as balance FROM Transactions as t
+	LEFT JOIN Users as u
+	ON t.account = u.account
+	GROUP BY u.name
+) as r
+WHERE balance > 10000;
+
+
+Problem: 627. Swap Salary
+
+Intuition:
+This is a simple problem while it requires to use `UPDATE` statement. Also, 
+for conditioning labelling, we consider using `CASE WHEN` statement
+
+Solution:
+UPDATE Salary
+SET sex = (
+	CASE sex 
+    WHEN 'f' THEN 'm'
+    WHEN 'm' THEN 'f'
+    END);
+	
+
+Problem: 1378. Replace Employee ID With The Unique Identifier
+
+Intuition:
+It's a straightforward left join problem
+
+Solution:
+SELECT eu.unique_id, e.name FROM Employees as e
+LEFT JOIN EmployeeUNI as eu
+ON e.id = eu.id;
