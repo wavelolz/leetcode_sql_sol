@@ -180,3 +180,101 @@ insert into EmployeeUNI (id, unique_id) values ('90', '3');
 SELECT eu.unique_id, e.name FROM Employees as e
 LEFT JOIN EmployeeUNI as eu
 ON e.id = eu.id;
+
+# Problem 1068
+DROP TABLE IF EXISTS Sales;
+Create table If Not Exists Sales (sale_id int, product_id int, year int, quantity int, price int);
+insert into Sales (sale_id, product_id, year, quantity, price) values ('1', '100', '2008', '10', '5000');
+insert into Sales (sale_id, product_id, year, quantity, price) values ('2', '100', '2009', '12', '5000');
+insert into Sales (sale_id, product_id, year, quantity, price) values ('7', '200', '2011', '15', '9000');
+
+DROP TABLE IF EXISTS Product;
+Create table If Not Exists Product (product_id int, product_name varchar(10));
+insert into Product (product_id, product_name) values ('100', 'Nokia');
+insert into Product (product_id, product_name) values ('200', 'Apple');
+insert into Product (product_id, product_name) values ('300', 'Samsung');
+
+SELECT p.product_name, s.year, s.price FROM Sales as s
+LEFT JOIN Product as p
+ON s.product_id = p.product_id;
+
+
+# Problem 1179
+DROP TABLE IF EXISTS Department;
+Create table If Not Exists Department (id int, revenue int, month varchar(5));
+insert into Department (id, revenue, month) values ('1', '8000', 'Jan');
+insert into Department (id, revenue, month) values ('2', '9000', 'Jan');
+insert into Department (id, revenue, month) values ('3', '10000', 'Feb');
+insert into Department (id, revenue, month) values ('1', '7000', 'Feb');
+insert into Department (id, revenue, month) values ('1', '6000', 'Mar');
+
+SELECT id,
+	SUM(CASE month WHEN 'Jan' THEN revenue ELSE NULL END) AS Jan_Revenue,
+    SUM(CASE month WHEN 'Feb' THEN revenue ELSE NULL END) AS Feb_Revenue,
+    SUM(CASE month WHEN 'Mar' THEN revenue ELSE NULL END) AS Mar_Revenue,
+    SUM(CASE month WHEN 'Apr' THEN revenue ELSE NULL END) AS Apr_Revenue,
+    SUM(CASE month WHEN 'May' THEN revenue ELSE NULL END) AS May_Revenue,
+    SUM(CASE month WHEN 'Jun' THEN revenue ELSE NULL END) AS Jun_Revenue,
+    SUM(CASE month WHEN 'Jul' THEN revenue ELSE NULL END) AS Jul_Revenue,
+    SUM(CASE month WHEN 'Aug' THEN revenue ELSE NULL END) AS Aug_Revenue,
+    SUM(CASE month WHEN 'Sep' THEN revenue ELSE NULL END) AS Sep_Revenue,
+    SUM(CASE month WHEN 'Oct' THEN revenue ELSE NULL END) AS Oct_Revenue,
+    SUM(CASE month WHEN 'Nov' THEN revenue ELSE NULL END) AS Nov_Revenue,
+    SUM(CASE month WHEN 'Dec' THEN revenue ELSE NULL END) AS Dec_Revenue
+FROM Department
+GROUP BY id;
+
+
+# Problem 1890
+DROP TABLE IF EXISTS Logins;
+Create table If Not Exists Logins (user_id int, time_stamp datetime);
+insert into Logins (user_id, time_stamp) values ('6', '2020-06-30 15:06:07');
+insert into Logins (user_id, time_stamp) values ('6', '2021-04-21 14:06:06');
+insert into Logins (user_id, time_stamp) values ('6', '2019-03-07 00:18:15');
+insert into Logins (user_id, time_stamp) values ('8', '2020-02-01 05:10:53');
+insert into Logins (user_id, time_stamp) values ('8', '2020-12-30 00:46:50');
+insert into Logins (user_id, time_stamp) values ('2', '2020-01-16 02:49:50');
+insert into Logins (user_id, time_stamp) values ('2', '2019-08-25 07:59:08');
+insert into Logins (user_id, time_stamp) values ('14', '2019-07-14 09:00:00');
+insert into Logins (user_id, time_stamp) values ('14', '2021-01-06 11:59:59');
+
+SELECT r.user_id, r.time_stamp AS last_stamp FROM(
+	SELECT *,
+		ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY time_stamp DESC) AS row_num
+	FROM Logins
+	WHERE time_stamp >= '2020-01-01 00:00:00' and time_stamp <= '2020-12-31 23:59:59'
+) as r
+WHERE r.row_num = 1;
+
+SELECT user_id, MAX(time_stamp) AS last_stamp FROM Logins
+WHERE YEAR(time_stamp) = '2020'
+GROUP BY user_id;
+
+# Problem 1484
+DROP TABLE IF EXISTS Activities;
+Create table If Not Exists Activities (sell_date date, product varchar(20));
+insert into Activities (sell_date, product) values ('2020-05-30', 'Headphone');
+insert into Activities (sell_date, product) values ('2020-06-01', 'Pencil');
+insert into Activities (sell_date, product) values ('2020-06-02', 'Mask');
+insert into Activities (sell_date, product) values ('2020-05-30', 'Basketball');
+insert into Activities (sell_date, product) values ('2020-06-01', 'Bible');
+insert into Activities (sell_date, product) values ('2020-06-02', 'Mask');
+insert into Activities (sell_date, product) values ('2020-05-30', 'T-Shirt');
+
+SELECT sell_date, COUNT(DISTINCT product) AS num_sold, GROUP_CONCAT(DISTINCT product order by product) AS products FROM Activities
+GROUP BY sell_date;
+
+# Problem 175
+DROP TABLE IF EXISTS Person;
+Create table If Not Exists Person (personId int, firstName varchar(255), lastName varchar(255));
+insert into Person (personId, lastName, firstName) values ('1', 'Wang', 'Allen');
+insert into Person (personId, lastName, firstName) values ('2', 'Alice', 'Bob');
+
+DROP TABLE IF EXISTS Address;
+Create table If Not Exists Address (addressId int, personId int, city varchar(255), state varchar(255));
+insert into Address (addressId, personId, city, state) values ('1', '2', 'New York City', 'New York');
+insert into Address (addressId, personId, city, state) values ('2', '3', 'Leetcode', 'California');
+
+SELECT p.firstname, p.lastname, a.city, a.state FROM Person as p
+LEFT JOIN Address as a
+ON p.personId = a.personId;
