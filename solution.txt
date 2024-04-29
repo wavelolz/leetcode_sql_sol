@@ -212,3 +212,131 @@ Solution:
 SELECT eu.unique_id, e.name FROM Employees as e
 LEFT JOIN EmployeeUNI as eu
 ON e.id = eu.id;
+
+
+Problem: 1068. Product Sales Analysis I
+
+Intuition:
+It's a straightforward join operation problem. All we have to think is that 
+what kind of join operation we have to implement. Since the problem requires
+us to demonstrate the information of each sale_id, so we can perform left join
+and treat Sales table as left table.
+
+Solution:
+SELECT p.product_name, s.year, s.price FROM Sales as s
+LEFT JOIN Product as p
+ON s.product_id = p.product_id;
+
+
+Problem: 1179. Reformat Department Table
+
+Intuition:
+This is also again a problem related to transposing. When think of transposing 
+problem, we would firstly consider `CASE WHEN` statement. And a tip for this 
+problem is that to show the "single" value when `GROUP BY` is used, we can 
+technically use `SUM` because `GROUP BY` statement requires an aggregate 
+function
+
+Approach:
+Firstly, we have to create new column for each month, so we use 
+
+	CASE month WHEN 'blahblahblah' THEN revenue ELSE null END
+	
+Next, since the problem requires us to calculate result for each month, we 
+have to use 
+	
+	GROUP BY id
+	
+Here comes the importance of aggregate function
+
+	SUM(CASE month WHEN 'blahblahblah' THEN revenue ELSE null END) AS 'blahblahblah_revenue'
+	
+Solution:
+SELECT id,
+	SUM(CASE month WHEN 'Jan' THEN revenue ELSE NULL END) AS Jan_Revenue,
+    SUM(CASE month WHEN 'Feb' THEN revenue ELSE NULL END) AS Feb_Revenue,
+    SUM(CASE month WHEN 'Mar' THEN revenue ELSE NULL END) AS Mar_Revenue,
+    SUM(CASE month WHEN 'Apr' THEN revenue ELSE NULL END) AS Apr_Revenue,
+    SUM(CASE month WHEN 'May' THEN revenue ELSE NULL END) AS May_Revenue,
+    SUM(CASE month WHEN 'Jun' THEN revenue ELSE NULL END) AS Jun_Revenue,
+    SUM(CASE month WHEN 'Jul' THEN revenue ELSE NULL END) AS Jul_Revenue,
+    SUM(CASE month WHEN 'Aug' THEN revenue ELSE NULL END) AS Aug_Revenue,
+    SUM(CASE month WHEN 'Sep' THEN revenue ELSE NULL END) AS Sep_Revenue,
+    SUM(CASE month WHEN 'Oct' THEN revenue ELSE NULL END) AS Oct_Revenue,
+    SUM(CASE month WHEN 'Nov' THEN revenue ELSE NULL END) AS Nov_Revenue,
+    SUM(CASE month WHEN 'Dec' THEN revenue ELSE NULL END) AS Dec_Revenue
+FROM Department
+GROUP BY id;
+
+
+Problem: 1890. The Latest Login in 2020
+
+Intuition:
+This problem asks us to filter out the latest login for each id in 2020. 
+So the first solution we come up to mind my be the combination usage 
+of `WHERE`, `ORDER BY`, `GROUP BY`, and `LIMIT` statements. However, it turns
+out that MySQL doesn't support this kind of operation. After thorough search,
+I've found that after MySQL8, there is a new window function called `ROW_NUMBER`
+that supports this kind of operation.
+
+Approach:
+Firstly, we filter out the date that is not in the year of 2020
+
+	SELECT *, FROM Logins
+	WHERE time_stamp >= '2020-01-01 00:00:00' and time_stamp <= '2020-12-31 23:59:59'
+	
+Next, we use the statement `ROW_NUMBER` to order the time_stamp based on each id
+
+	SELECT *,
+		ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY time_stamp DESC) AS row_num
+	FROM Logins
+	WHERE time_stamp >= '2020-01-01 00:00:00' and time_stamp <= '2020-12-31 23:59:59'
+
+This way, we can use this subquery result to filter out the latest login date for each
+id.
+
+Solution:
+SELECT r.user_id, r.time_stamp AS last_stamp FROM(
+	SELECT *,
+		ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY time_stamp DESC) AS row_num
+	FROM Logins
+	WHERE time_stamp >= '2020-01-01 00:00:00' and time_stamp <= '2020-12-31 23:59:59'
+) as r
+WHERE r.row_num = 1;
+
+Modified Solution:
+SELECT user_id, MAX(time_stamp) AS last_stamp FROM Logins
+WHERE YEAR(time_stamp) = '2020'
+GROUP BY user_id;
+
+Modified Solution Explained:
+This solution basically has the same concept with mine, but it makes use of other statements
+to make the code cleaner. First, it uses `YEAR` to filter out data in 2020. For another, it 
+makes use of `MAX` aggregate function in place of `WHERE r.row_number = 1`
+
+
+Problem: 1484. Group Sold Products By The Date
+Intuition:
+This is a problem with `GROUP_BY`, but the tricky one is that it has to concatenate the string.
+After thorough research, it turns out that this is only a simple problem that makes use of 
+`GROUP_CONCAT` statement.
+
+Solution:
+SELECT sell_date, 
+	COUNT(DISTINCT product) AS num_sold, 
+	GROUP_CONCAT(DISTINCT product order by product) AS products FROM Activities
+GROUP BY sell_date;
+
+
+Problem: 175. Combine Two Tables
+
+Intuition:
+This is a simple join problem. However, the worth-noticing part is that if a person doesn't have
+address information, he/she should still appears on the table with NULL in his/her address column.
+So the INNER JOIN operation doesn't work, as it will filters out people who don't have address 
+information. As a result, we shoud use LEFT JOIN operation
+
+Solution:
+SELECT p.firstname, p.lastname, a.city, a.state FROM Person as p
+LEFT JOIN Address as a
+ON p.personId = a.personId;
