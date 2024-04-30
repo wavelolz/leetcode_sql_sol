@@ -278,3 +278,101 @@ insert into Address (addressId, personId, city, state) values ('2', '3', 'Leetco
 SELECT p.firstname, p.lastname, a.city, a.state FROM Person as p
 LEFT JOIN Address as a
 ON p.personId = a.personId;
+
+
+# Problem 1148
+DROP TABLE IF EXISTS Views;
+Create table If Not Exists Views (article_id int, author_id int, viewer_id int, view_date date);
+insert into Views (article_id, author_id, viewer_id, view_date) values ('1', '3', '5', '2019-08-01');
+insert into Views (article_id, author_id, viewer_id, view_date) values ('1', '3', '6', '2019-08-02');
+insert into Views (article_id, author_id, viewer_id, view_date) values ('2', '7', '7', '2019-08-01');
+insert into Views (article_id, author_id, viewer_id, view_date) values ('2', '7', '6', '2019-08-02');
+insert into Views (article_id, author_id, viewer_id, view_date) values ('4', '7', '1', '2019-07-22');
+insert into Views (article_id, author_id, viewer_id, view_date) values ('3', '4', '4', '2019-07-21');
+insert into Views (article_id, author_id, viewer_id, view_date) values ('3', '4', '4', '2019-07-21');
+
+SELECT DISTINCT author_id AS id FROM Views
+WHERE author_id=viewer_id
+ORDER BY author_id ASC;
+
+
+# Problem 577
+DROP TABLE IF EXISTS Employee;
+Create table If Not Exists Employee (empId int, name varchar(255), supervisor varchar(255), salary int);
+insert into Employee (empId, name, supervisor, salary) values ('3', 'Brad', 'None', '4000');
+insert into Employee (empId, name, supervisor, salary) values ('1', 'John', '3', '1000');
+insert into Employee (empId, name, supervisor, salary) values ('2', 'Dan', '3', '2000');
+insert into Employee (empId, name, supervisor, salary) values ('4', 'Thomas', '3', '4000');
+
+DROP TABLE IF EXISTS Bonus;
+Create table If Not Exists Bonus (empId int, bonus int);
+insert into Bonus (empId, bonus) values ('2', '500');
+insert into Bonus (empId, bonus) values ('4', '2000');
+
+SELECT e.name, b.bonus FROM Employee as e
+LEFT JOIN Bonus as b
+ON e.empId=b.empId
+WHERE b.bonus<1000 or b.bonus is NULL;
+
+
+# Problem 511
+DROP TABLE IF EXISTS Activity;
+Create table If Not Exists Activity (player_id int, device_id int, event_date date, games_played int);
+insert into Activity (player_id, device_id, event_date, games_played) values ('1', '2', '2016-03-01', '5');
+insert into Activity (player_id, device_id, event_date, games_played) values ('1', '2', '2016-05-02', '6');
+insert into Activity (player_id, device_id, event_date, games_played) values ('2', '3', '2017-06-25', '1');
+insert into Activity (player_id, device_id, event_date, games_played) values ('3', '1', '2016-03-02', '0');
+insert into Activity (player_id, device_id, event_date, games_played) values ('3', '4', '2018-07-03', '5');
+
+SELECT player_id, MIN(event_date) AS first_login FROM Activity
+GROUP BY player_id;
+
+
+# Problem 620
+DROP TABLE IF EXISTS cinema;
+Create table If Not Exists cinema (id int, movie varchar(255), description varchar(255), rating float(2, 1));
+insert into cinema (id, movie, description, rating) values ('1', 'War', 'great 3D', '8.9');
+insert into cinema (id, movie, description, rating) values ('2', 'Science', 'fiction', '8.5');
+insert into cinema (id, movie, description, rating) values ('3', 'irish', 'boring', '6.2');
+insert into cinema (id, movie, description, rating) values ('4', 'Ice song', 'Fantacy', '8.6');
+insert into cinema (id, movie, description, rating) values ('5', 'House card', 'Interesting', '9.1');
+
+SELECT * FROM cinema
+WHERE id % 2 = 1 and description != 'boring'
+ORDER BY rating DESC;
+
+
+# Problem 608
+DROP TABLE IF EXISTS Tree;
+Create table If Not Exists Tree (id int, p_id varchar(255));
+insert into Tree (id, p_id) values ('1', 'None');
+insert into Tree (id, p_id) values ('2', '1');
+insert into Tree (id, p_id) values ('3', '1');
+insert into Tree (id, p_id) values ('4', '2');
+insert into Tree (id, p_id) values ('5', '2');
+
+SELECT id,
+	CASE
+		WHEN p_id = 'None' THEN 'Root'
+		WHEN id in (SELECT DISTINCT p_id from tree) THEN 'Inner'
+		ELSE 'Leaf'
+	END AS type
+FROM Tree;
+
+
+# Problem 610
+DROP TABLE IF EXISTS Triangle;
+Create table If Not Exists Triangle (x int, y int, z int);
+insert into Triangle (x, y, z) values ('13', '15', '30');
+insert into Triangle (x, y, z) values ('10', '20', '15');
+
+SELECT *,
+	CASE 
+		WHEN x+y>z and x+z>y and y+z>x THEN 'Yes'
+        ELSE 'No'
+	END AS 'triangle'
+FROM Triangle;
+
+SELECT *,
+	IF (x+y>z and x+z>y and y+z>x, 'Yes', 'No') AS 'triangle'
+FROM Triangle;

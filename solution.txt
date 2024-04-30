@@ -340,3 +340,104 @@ Solution:
 SELECT p.firstname, p.lastname, a.city, a.state FROM Person as p
 LEFT JOIN Address as a
 ON p.personId = a.personId;
+
+
+Problem: 1148. Article Views I
+
+Intuition:
+The problem requires us to list all the authors that have at least view there own articles once,
+so what we have to to is to list the rows that has the same author_id and viewer_id. The following
+steps are trivial
+
+Solution:
+SELECT DISTINCT author_id AS id FROM Views
+WHERE author_id=viewer_id
+ORDER BY author_id ASC;
+
+
+Problem: 577. Employee Bonus
+
+Intuition:
+The is a simple LEFT JOIN problem
+
+Solution:
+SELECT e.name, b.bonus FROM Employee as e
+LEFT JOIN Bonus as b
+ON e.empId=b.empId
+WHERE b.bonus<1000 or b.bonus is NULL;
+
+
+Problem: 511. Game Play Analysis I
+
+Intuition:
+A simple problem requires special use of `GROUP BY` and `MIN` statement
+
+Solution:
+SELECT player_id, MIN(event_date) AS first_login FROM Activity
+GROUP BY player_id;
+
+
+Problem: 620. Not Boring Movies
+
+Intuition:
+A simple proble. Just have to notice how to use % to filter out odd numbers
+
+Solution:
+SELECT * FROM cinema
+WHERE id % 2 = 1 and description != 'boring'
+ORDER BY rating DESC;
+
+
+Problem: 608. Tree Node
+
+Intuition:
+This problem asks us to label the type of nodes of the tree. As there're three
+types of nodes, we have to come up of a condition to put them in different categories.
+We can then notice that a root must doesn't have parent, so it's parent's id must be
+NULL. Next, a node would be an inner node if its id is one of the parent's id. Then
+the remaining nodes are leaf node. Under this circumstances, since we have to check the 
+condition for each row. We come up with `CASE WHEN` statement
+
+Approach:
+First, we can find root node by
+
+	p_id = 'None'
+	
+Next, we can find inner node by
+
+	id in (SELECT DISTINCT p_id from tree)
+	
+Eventually, we can use `CASE WHEN` to combine the results
+
+Solution:
+SELECT id,
+	CASE
+		WHEN p_id = 'None' THEN 'Root'
+		WHEN id in (SELECT DISTINCT p_id from tree) THEN 'Inner'
+		ELSE 'Leaf'
+	END AS type
+FROM Tree;
+
+
+Problem: 610. Triangle Judgement
+
+Intuition:
+Simple, just have to know that three sides could form a triangle if and only if 
+the sum of any two sides is greater than the third side
+
+Solution:
+SELECT *,
+	CASE 
+		WHEN x+y>z and x+z>y and y+z>x THEN 'Yes'
+        ELSE 'No'
+	END AS 'triangle'
+FROM Triangle;
+
+Modified Solution:
+SELECT *,
+	IF (x+y>z and x+z>y and y+z>x, 'Yes', 'No') AS 'triangle'
+FROM Triangle;
+
+Modified Solution Explained:
+This solution makes use of the `IF` statement. It improves the codes' redability
+and performance at the same time.
