@@ -441,3 +441,166 @@ FROM Triangle;
 Modified Solution Explained:
 This solution makes use of the `IF` statement. It improves the codes' redability
 and performance at the same time.
+
+
+Problem: 1965. Employees With Missing Information
+
+Intuition:
+The first idea when I see this problem is to use FULL OUTER JOIN. Because we mustn't
+left any records in both the tables. But it soon turns out that if we implement the 
+FULL OUTER JOIN directly, then we have to check whether the left or right table doesn't
+contain employee_id. So instead of implementing FULL OUTER JOIN directly, we can actually
+filter out the employee with missed information first and then implement FULL OUTER JOIN.
+
+Approach:
+This concept is kinda similar to FULL OUTER JOIN. To find out the missed information from
+the left. We can run
+
+	SELECT e.employee_id FROM Employees as e
+	LEFT JOIN Salaries as s
+	ON e.employee_id=s.employee_id
+	WHERE e.name is NULL or s.salary is NULL
+	
+Next, we can find it from the right
+
+	SELECT s.employee_id FROM Salaries as s
+	LEFT JOIN Employees as e
+	ON e.employee_id=s.employee_id
+	WHERE e.name is NULL or s.salary is NULL
+
+Then, we can use `UNION ALL` statement to concatenate the result and use subquery for reordering
+
+Solution:
+SELECT * FROM (
+	SELECT e.employee_id FROM Employees as e
+	LEFT JOIN Salaries as s
+	ON e.employee_id=s.employee_id
+	WHERE e.name is NULL or s.salary is NULL
+	UNION ALL
+	SELECT s.employee_id FROM Salaries as s
+	LEFT JOIN Employees as e
+	ON e.employee_id=s.employee_id
+	WHERE e.name is NULL or s.salary is NULL
+) AS r
+ORDER BY employee_id ASC;
+
+
+Problem: 182. Duplicate Emails
+
+Intuition:
+The structure of the problem is straightforward: find the duplicate value. So the first thing
+comes up to my mind is `ROWNUMBER() OVER` statement, which label rows based on specific columns
+
+Approach:
+First, we use `ROWNUMBER() OVER` statement to generate the id for each of the email
+	
+	SELECT email, 
+	ROW_NUMBER() OVER (PARTITION BY email) as row_num
+	FROM Person
+	
+Note that we don't have to add `GROUP BY email`. Because it will then treat email distinctly, 
+making the row_num becomes 1 for every email.
+Then we could filter out the row that has row_num=2, indicating that this email occured more 
+than once
+	
+Solution:
+SELECT email FROM (
+	SELECT email, 
+		ROW_NUMBER() OVER (PARTITION BY email) as row_num
+	FROM Person
+) as r
+WHERE r.row_num=2;
+
+Modified Solution;
+SELECT email FROM Person
+GROUP BY email
+HAVING COUNT(email)>1;
+
+Modified Solution Explained:
+Traditionally, we would use `WHERE` to filter rows with condition. However, it cannot used with
+aggregate function. But `HAVING` statement CAN!!! This solution makes use of `HAVING` statement,
+which drastically improve readability and performance.
+
+
+Problem: 1327. List the Products Ordered in a Period
+
+Intuition:
+It's actually a compound question that needs us to tackle step by step. We can break it into the
+following part:
+	1. Find orders occured in 2020-02
+	2. Find the products that have at least 100 ordered units
+	3. Join the table to get the name of the product
+	
+Approach:
+Step1: Find orders occured in 2020-02
+
+	SELECT * FROM Orders
+	WHERE YEAR(order_date)='2020' and MONTH(order_date)='2';
+	
+Step2: Find the products that have at least 100 ordered units
+
+	SELECT * FROM Orders
+	GROUP BY product_id
+	HAVING SUM(unit)>=100
+	
+Step3: Join the table to get the name of the product
+
+Solution:
+SELECT p.product_name, o.unit FROM Products as p
+INNER JOIN (
+	SELECT product_id, SUM(unit) as unit FROM Orders
+	WHERE YEAR(order_date)='2020' and MONTH(order_date)='2'
+	GROUP BY product_id
+	HAVING SUM(unit)>=100
+) AS o
+ON p.product_id=o.product_id;
+
+
+Problem: 1050. Actors and Directors Who Cooperated At Least Three Times
+
+Intuition:
+Because we have to find unique pairs of (actor_id, director_id), so we must build 
+such a string. After we have this string, we could use `GROUP BY` and `HAVING` to 
+count the occurance
+
+Approach:
+We use `CONCAT` to concatenate two columns, and use additional comma to serve as the 
+separator
+
+	SELECT CONCAT(actor_id, ',', director_id) AS ad
+	FROM ActorDirector
+	
+Next, we can count the occurance
+
+	SELECT CONCAT(actor_id, ',', director_id) AS ad
+	FROM ActorDirector
+	GROUP BY CONCAT(actor_id, ',', director_id)
+	HAVING COUNT(CONCAT(actor_id, ',', director_id)) >=3
+
+Now, we have the result, but we must split it into two columns instead of one. We can 
+use `SUBSTRING_INDEX` statement here. So it will act like
+
+	SELECT SUBSTRING_INDEX(r.ad, ',', 1) AS actor_id, SUBSTRING_INDEX(r.ad, ',', -1) AS director_id 
+	FROM r
+	
+Last step, we have to convert it back to integer, we could use `CAST` statement here
+
+	SELECT CAST(actor_id, UNSIGNED), CAST(director_id, UNSIGNED)
+	FROM r
+	
+Solution:
+SELECT CAST(SUBSTRING_INDEX(r.ad, ',', 1) AS UNSIGNED) AS actor_id, CAST(SUBSTRING_INDEX(r.ad, ',', -1) AS UNSIGNED) AS director_id FROM (
+	SELECT CONCAT(actor_id, ',', director_id) AS ad
+	FROM ActorDirector
+	GROUP BY CONCAT(actor_id, ',', director_id)
+	HAVING COUNT(CONCAT(actor_id, ',', director_id)) >=3
+) AS r
+
+Modified Solution:
+SELECT actor_id, director_id FROM ActorDirector
+GROUP BY actor_id, director_id
+HAVING COUNT(timestamp)>=3;
+
+Modified Solution Explained:
+This solution utilize the timestamp column as a was to count the occurance. This is brilliant. However,
+if there are only actor_id and director_id column, then this solution couldn't work

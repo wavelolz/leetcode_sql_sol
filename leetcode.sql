@@ -376,3 +376,108 @@ FROM Triangle;
 SELECT *,
 	IF (x+y>z and x+z>y and y+z>x, 'Yes', 'No') AS 'triangle'
 FROM Triangle;
+
+
+# Problem 1965
+DROP TABLE IF EXISTS Employees;
+Create table If Not Exists Employees (employee_id int, name varchar(30));
+insert into Employees (employee_id, name) values ('2', 'Crew');
+insert into Employees (employee_id, name) values ('4', 'Haven');
+insert into Employees (employee_id, name) values ('5', 'Kristian');
+
+DROP TABLE IF EXISTS Salaries;
+Create table If Not Exists Salaries (employee_id int, salary int);
+insert into Salaries (employee_id, salary) values ('5', '76071');
+insert into Salaries (employee_id, salary) values ('1', '22517');
+insert into Salaries (employee_id, salary) values ('4', '63539');
+
+SELECT * FROM (
+	SELECT e.employee_id FROM Employees as e
+	LEFT JOIN Salaries as s
+	ON e.employee_id=s.employee_id
+	WHERE e.name is NULL or s.salary is NULL
+	UNION ALL
+	SELECT s.employee_id FROM Salaries as s
+	LEFT JOIN Employees as e
+	ON e.employee_id=s.employee_id
+	WHERE e.name is NULL or s.salary is NULL
+) AS r
+ORDER BY employee_id ASC;
+
+
+# Problem 182
+DROP TABLE IF EXISTS Person;
+Create table If Not Exists Person (id int, email varchar(255));
+insert into Person (id, email) values ('1', 'a@b.com');
+insert into Person (id, email) values ('2', 'c@d.com');
+insert into Person (id, email) values ('3', 'a@b.com');
+
+SELECT email FROM (
+	SELECT email, 
+		ROW_NUMBER() OVER (PARTITION BY email) as row_num
+	FROM Person
+) as r
+WHERE r.row_num=2;
+
+SELECT email FROM Person
+GROUP BY email
+HAVING COUNT(email)>1;
+
+
+# Problem 1327
+DROP TABLE IF EXISTS Products;
+Create table If Not Exists Products (product_id int, product_name varchar(40), product_category varchar(40));
+insert into Products (product_id, product_name, product_category) values ('1', 'Leetcode Solutions', 'Book');
+insert into Products (product_id, product_name, product_category) values ('2', 'Jewels of Stringology', 'Book');
+insert into Products (product_id, product_name, product_category) values ('3', 'HP', 'Laptop');
+insert into Products (product_id, product_name, product_category) values ('4', 'Lenovo', 'Laptop');
+insert into Products (product_id, product_name, product_category) values ('5', 'Leetcode Kit', 'T-shirt');
+
+DROP TABLE IF EXISTS Orders;
+Create table If Not Exists Orders (product_id int, order_date date, unit int);
+insert into Orders (product_id, order_date, unit) values ('1', '2020-02-05', '60');
+insert into Orders (product_id, order_date, unit) values ('1', '2020-02-10', '70');
+insert into Orders (product_id, order_date, unit) values ('2', '2020-01-18', '30');
+insert into Orders (product_id, order_date, unit) values ('2', '2020-02-11', '80');
+insert into Orders (product_id, order_date, unit) values ('3', '2020-02-17', '2');
+insert into Orders (product_id, order_date, unit) values ('3', '2020-02-24', '3');
+insert into Orders (product_id, order_date, unit) values ('4', '2020-03-01', '20');
+insert into Orders (product_id, order_date, unit) values ('4', '2020-03-04', '30');
+insert into Orders (product_id, order_date, unit) values ('4', '2020-03-04', '60');
+insert into Orders (product_id, order_date, unit) values ('5', '2020-02-25', '50');
+insert into Orders (product_id, order_date, unit) values ('5', '2020-02-27', '50');
+insert into Orders (product_id, order_date, unit) values ('5', '2020-03-01', '50');
+
+SELECT p.product_name, o.unit FROM Products as p
+INNER JOIN (
+	SELECT product_id, SUM(unit) as unit FROM Orders
+	WHERE YEAR(order_date)='2020' and MONTH(order_date)='2'
+	GROUP BY product_id
+	HAVING SUM(unit)>=100
+) AS o
+ON p.product_id=o.product_id;
+
+
+# Problem 1050
+DROP TABLE IF EXISTS ActorDirector;
+Create table If Not Exists ActorDirector (actor_id int, director_id int, timestamp int);
+insert into ActorDirector (actor_id, director_id, timestamp) values ('1', '1', '0');
+insert into ActorDirector (actor_id, director_id, timestamp) values ('1', '1', '1');
+insert into ActorDirector (actor_id, director_id, timestamp) values ('1', '1', '2');
+insert into ActorDirector (actor_id, director_id, timestamp) values ('1', '2', '3');
+insert into ActorDirector (actor_id, director_id, timestamp) values ('1', '2', '4');
+insert into ActorDirector (actor_id, director_id, timestamp) values ('2', '1', '5');
+insert into ActorDirector (actor_id, director_id, timestamp) values ('2', '1', '6');
+
+SELECT CAST(SUBSTRING_INDEX(r.ad, ',', 1) AS UNSIGNED) AS actor_id, CAST(SUBSTRING_INDEX(r.ad, ',', -1) AS UNSIGNED) AS director_id FROM (
+	SELECT CONCAT(actor_id, ',', director_id) AS ad
+	FROM ActorDirector
+	GROUP BY CONCAT(actor_id, ',', director_id)
+	HAVING COUNT(CONCAT(actor_id, ',', director_id)) >=3
+) AS r;
+
+SELECT actor_id, director_id FROM ActorDirector
+GROUP BY actor_id, director_id
+HAVING COUNT(timestamp)>=3;
+
+
