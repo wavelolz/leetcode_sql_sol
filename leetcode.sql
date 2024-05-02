@@ -481,3 +481,138 @@ GROUP BY actor_id, director_id
 HAVING COUNT(timestamp)>=3;
 
 
+# Problem 584
+DROP TABLE IF EXISTS Custormer;
+Create table If Not Exists Customer (id int, name varchar(25), referee_id VARCHAR(255));
+insert into Customer (id, name, referee_id) values ('1', 'Will', 'None');
+insert into Customer (id, name, referee_id) values ('2', 'Jane', 'None');
+insert into Customer (id, name, referee_id) values ('3', 'Alex', '2');
+insert into Customer (id, name, referee_id) values ('4', 'Bill', 'None');
+insert into Customer (id, name, referee_id) values ('5', 'Zack', '1');
+insert into Customer (id, name, referee_id) values ('6', 'Mark', '2');
+
+SELECT name FROM Customer
+WHERE referee_id != '2';
+
+
+# Problem 626
+DROP TABLE IF EXISTS Seat;
+Create table If Not Exists Seat (id int, student varchar(255));
+insert into Seat (id, student) values ('1', 'Field');
+insert into Seat (id, student) values ('2', 'Sherwood');
+insert into Seat (id, student) values ('3', 'Aly');
+insert into Seat (id, student) values ('4', 'Harriman');
+insert into Seat (id, student) values ('5', 'Christ');
+insert into Seat (id, student) values ('6', 'Pullan');
+insert into Seat (id, student) values ('7', 'Harry');
+insert into Seat (id, student) values ('8', 'Roosevelt');
+insert into Seat (id, student) values ('9', 'Richard');
+insert into Seat (id, student) values ('10', 'Evan');
+insert into Seat (id, student) values ('11', 'Pansy');
+insert into Seat (id, student) values ('12', 'Darwin');
+insert into Seat (id, student) values ('13', 'Chamberian');
+insert into Seat (id, student) values ('14', 'Kennedy');
+insert into Seat (id, student) values ('15', 'Clapham');
+insert into Seat (id, student) values ('16', 'Hart');
+insert into Seat (id, student) values ('17', 'Carllyle');
+insert into Seat (id, student) values ('18', 'Esther');
+insert into Seat (id, student) values ('19', 'Rhodes');
+insert into Seat (id, student) values ('20', 'Hodgson');
+
+
+SELECT ROW_NUMBER() OVER (PARTITION BY (SELECT 1) ORDER BY r.rown ASC, r.id DESC) AS id,
+	r.student
+FROM (
+	SELECT *,
+		ROW_NUMBER() OVER (ORDER BY id) AS rown
+	FROM Seat
+	WHERE id % 2 = 1
+	UNION ALL
+	SELECT *,
+		ROW_NUMBER() OVER (ORDER BY id) AS rown
+	FROM Seat
+	WHERE id % 2 = 0
+	ORDER BY rown ASC, id DESC
+) AS r;
+
+SELECT 
+	CASE
+		WHEN id = (SELECT MAX(id) FROM Seat) AND id % 2 = 1 THEN id
+        WHEN id % 2 = 1 THEN id + 1
+        WHEN id % 2 = 0 THEN id - 1
+    END AS id,
+    student
+FROM Seat
+ORDER BY id;
+
+
+# Problem 181
+DROP TABLE IF EXISTS Employee;
+Create table If Not Exists Employee (id int, name varchar(255), salary int, managerId VARCHAR(255));
+insert into Employee (id, name, salary, managerId) values ('1', 'Joe', '70000', '3');
+insert into Employee (id, name, salary, managerId) values ('2', 'Henry', '80000', '4');
+insert into Employee (id, name, salary, managerId) values ('3', 'Sam', '60000', 'None');
+insert into Employee (id, name, salary, managerId) values ('4', 'Max', '90000', 'None');
+
+SELECT e1.name AS employee FROM Employee as e1
+INNER JOIN Employee as e2
+ON e1.managerId = e2.id
+WHERE e1.salary > e2.salary;
+
+
+# Problem 183
+DROP TABLE IF EXISTS Customers;
+Create table If Not Exists Customers (id int, name varchar(255));
+insert into Customers (id, name) values ('1', 'Joe');
+insert into Customers (id, name) values ('2', 'Henry');
+insert into Customers (id, name) values ('3', 'Sam');
+insert into Customers (id, name) values ('4', 'Max');
+
+DROP TABLE IF EXISTS Orders;
+Create table If Not Exists Orders (id int, customerId int);
+insert into Orders (id, customerId) values ('1', '3');
+insert into Orders (id, customerId) values ('2', '1');
+
+SELECT c.name AS customers FROM Customers AS c
+LEFT OUTER JOIN Orders AS o
+ON c.id = customerId
+WHERE o.id is NULL;
+
+
+# Problem 1729
+DROP TABLE IF EXISTS Followers;
+Create table If Not Exists Followers(user_id int, follower_id int);
+insert into Followers (user_id, follower_id) values ('0', '1');
+insert into Followers (user_id, follower_id) values ('1', '0');
+insert into Followers (user_id, follower_id) values ('2', '0');
+insert into Followers (user_id, follower_id) values ('2', '1');
+
+SELECT user_id, COUNT(follower_id) AS followers_count FROM Followers
+GROUP BY user_id
+ORDER BY user_id ASC;
+
+
+# Problem 1581
+DROP TABLE IF EXISTS Visits;
+Create table If Not Exists Visits(visit_id int, customer_id int);
+insert into Visits (visit_id, customer_id) values ('1', '23');
+insert into Visits (visit_id, customer_id) values ('2', '9');
+insert into Visits (visit_id, customer_id) values ('4', '30');
+insert into Visits (visit_id, customer_id) values ('5', '54');
+insert into Visits (visit_id, customer_id) values ('6', '96');
+insert into Visits (visit_id, customer_id) values ('7', '54');
+insert into Visits (visit_id, customer_id) values ('8', '54');
+
+DROP TABLE IF EXISTS Transactions;
+Create table If Not Exists Transactions(transaction_id int, visit_id int, amount int);
+insert into Transactions (transaction_id, visit_id, amount) values ('2', '5', '310');
+insert into Transactions (transaction_id, visit_id, amount) values ('3', '5', '300');
+insert into Transactions (transaction_id, visit_id, amount) values ('9', '5', '200');
+insert into Transactions (transaction_id, visit_id, amount) values ('12', '1', '910');
+insert into Transactions (transaction_id, visit_id, amount) values ('13', '2', '970');
+
+SELECT v.customer_id, COUNT(*) AS count_no_trans FROM Visits AS v
+LEFT OUTER JOIN Transactions AS t
+ON v.visit_id=t.visit_id
+WHERE t.transaction_id is NULL
+GROUP BY v.customer_id;
