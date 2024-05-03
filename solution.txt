@@ -739,3 +739,197 @@ LEFT OUTER JOIN Transactions AS t
 ON v.visit_id=t.visit_id
 WHERE t.transaction_id is NULL
 GROUP BY v.customer_id;
+
+
+Problem: 595. Big Countries
+
+Intuition:
+Trivial
+
+Solution:
+SELECT name, population, area FROM World
+WHERE area>=3000000 or population>=25000000;
+
+
+Problem: 1661. Average Time of Process per Machine
+
+Intuition:
+This problem asks us to calculate the average processing time for each machine.
+And we see that for each row there is 'start' timestamp and 'end' timestamp. So
+the first task we have to do is to compute the difference between two consecutive
+rows. This task has to do together with `GROUP BY machine_id, process_id`. Then,
+with the column that shows the difference between two consecutive rows. We then 
+have to compute the average based on `GROUP BY machine_id`. Then we finish
+
+Approach:
+Firstly, we use `CASE WHEN` to create new column. This new column would turn the 
+`start` timestamp into negative. By doing this, we can then add the start and end
+timestamp to compute the difference
+
+	CASE activity_type
+		WHEN 'start' THEN ROUND(-timestamp, 3)
+		WHEN 'end' THEN ROUND(timestamp, 3)
+	END
+	
+Next, we can compute the total process time based on each process of each machine
+
+	SELECT machine_id,
+		SUM(
+			CASE activity_type
+				WHEN 'start' THEN ROUND(-timestamp, 3)
+				WHEN 'end' THEN ROUND(timestamp, 3)
+			END
+		) AS nn
+	FROM Activity
+	GROUP BY machine_id, process_id
+	
+Now that we can compute the average process time for each machine
+
+	SELECT r.machine_id, ROUND(AVG(r.nn), 3) AS processing_time FROM (
+	SUBTABLE
+	) AS r
+	GROUP BY r.machine_id;
+	
+Solution:
+SELECT r.machine_id, ROUND(AVG(r.nn), 3) AS processing_time FROM (
+	SELECT machine_id,
+		SUM(
+			CASE activity_type
+				WHEN 'start' THEN ROUND(-timestamp, 3)
+				WHEN 'end' THEN ROUND(timestamp, 3)
+			END
+		) AS nn
+	FROM Activity
+	GROUP BY machine_id, process_id
+) AS r
+GROUP BY r.machine_id;
+
+Modified Solution:
+SELECT a1.machine_id, ROUND(AVG(a2.timestamp-a1.timestamp), 3) AS processing_time FROM Activity AS a1
+INNER JOIN Activity AS a2
+ON a1.machine_id=a2.machine_id AND a1.process_id=a2.process_id AND a1.activity_type='start' AND a2.activity_type='end'
+GROUP BY a1.machine_id;
+
+Modified Solution Explained:
+This solution makes use of INNER JOIN to separate start and end timestamp. So the first step
+is
+
+	SELECT * FROM Activity AS a1
+	INNER JOIN Activity AS a2
+	ON a1.machine_id=a2.machine_id AND a1.process_id=a2.process_id;
+	
+By doing this, the number of rows of (machine_id=p, process_id=m) will becomes 4 from 2, which 
+represents the all combinations. Next, we can filter out the row that we want to compute the
+difference. This is where the
+
+	a1.activity_type='start' AND a2.activity_type='end'
+	
+comes. The following query is then trivial.
+
+
+Problem: 1204. Last Person to Fit in the Bus
+
+Intuition:
+This is a classical problem. The most important part is how to implement the cumulative sum 
+like operation. There are two methods: Correlated Query and Variables
+
+Correlated Query:
+SELECT q1.person_name
+FROM Queue AS q1
+WHERE (SELECT SUM(q2.weight) FROM Queue as q2 WHERE q2.turn <= q1.turn) <= 1000
+ORDER BY q1.turn DESC LIMIT 1;
+
+Correlated Query Explained:
+First, with the query
+
+	SELECT *,
+		(
+		SELECT SUM(q2.weight) FROM Queue as q2
+		WHERE q2.turn <= q1.turn
+	) AS cumulative_weight
+	FROM Queue AS q1;
+
+we can find the cumulative weight of the original column. It works because of the statement
+`WHERE q2.turn <= q1.turn`. Next, we can filter out rows that the cumulative weight is no 
+greater than 1000
+
+	SELECT q1.person_name
+	FROM Queue AS q1
+	WHERE (SELECT SUM(q2.weight) FROM Queue as q2 WHERE q2.turn <= q1.turn) <= 1000;
+	
+In the end, we use reverse order to find the last person
+
+	ORDER BY q1.turn DESC LIMIT 1;
+	
+Variables:
+This method makes use of MySQL variabls that store the values of cumulative weight, the query
+is as follows
+
+	SELECT person_name, turn,
+		@running_total := @running_total + q.weight AS cum
+	FROM Queue AS q
+	INNER JOIN (SELECT @running_total := 0) AS r
+	ORDER BY q.turn ASC
+	
+The `INNER JOIN` part is just use to initialize the variable every time the query runs. After
+acquiring the cumulative weight column, the following steps are trivial.
+
+
+Problem: 607. Sales Person
+
+Intuition:
+Though the problem seems complicated, we can break it into parts and tackle it step by step
+
+	1. Find the orders that have interaction with RED company
+	2. Find which sales_id have interaction with these orders
+	3. Drop sales_id in step2, the remaining is the answer
+	
+Approach:
+Step1: Find the orders that have interaction with RED company
+
+	SELECT * FROM Orders
+	WHERE com_id IN (
+		SELECT com_Id FROM Company 
+		WHERE name = "RED"
+	)
+
+Step2: Find which sales_id have interaction with these orders
+
+	SELECT s.name FROM SalesPerson AS s
+	LEFT OUTER JOIN (SUBTABLE) AS oc
+	ON s.sales_id=oc.sales_id
+		
+Step3: Drop sales_id in step2, the remaining is the answer
+	
+	WHERE oc.order_id IS NULL;
+	
+Solution:
+SELECT s.name FROM SalesPerson AS s
+LEFT OUTER JOIN (
+	SELECT * FROM Orders
+	WHERE com_id IN (
+		SELECT com_Id FROM Company 
+		WHERE name = "RED"
+)) AS oc
+ON s.sales_id=oc.sales_id
+WHERE oc.order_id IS NULL;
+
+
+Problem: 586. Customer Placing the Largest Number of Orders
+
+Intuition:
+When facing this problem, we immediately come up `ORDER BY` aligned with `COUNT`. 
+When the first task is finished, we will use `ORDER BY` aligned with `LIMIT` to find
+the customer_id that has the largest amount of orders
+
+Solution:
+SELECT r.customer_number FROM(
+	SELECT customer_number,
+		COUNT(*) AS order_num
+	FROM orders
+	GROUP BY customer_number
+) AS r
+ORDER BY r.order_num DESC LIMIT 1;
+	
+
+	

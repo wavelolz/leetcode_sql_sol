@@ -616,3 +616,128 @@ LEFT OUTER JOIN Transactions AS t
 ON v.visit_id=t.visit_id
 WHERE t.transaction_id is NULL
 GROUP BY v.customer_id;
+
+
+# Problem 595
+DROP TABLE IF EXISTS World;
+Create table If Not Exists World (name varchar(255), continent varchar(255), area int, population int, gdp bigint);
+insert into World (name, continent, area, population, gdp) values ('Afghanistan', 'Asia', '652230', '25500100', '20343000000');
+insert into World (name, continent, area, population, gdp) values ('Albania', 'Europe', '28748', '2831741', '12960000000');
+insert into World (name, continent, area, population, gdp) values ('Algeria', 'Africa', '2381741', '37100000', '188681000000');
+insert into World (name, continent, area, population, gdp) values ('Andorra', 'Europe', '468', '78115', '3712000000');
+insert into World (name, continent, area, population, gdp) values ('Angola', 'Africa', '1246700', '20609294', '100990000000');
+
+SELECT name, population, area FROM World
+WHERE area>=3000000 or population>=25000000;
+
+
+# Problem 1661
+DROP TABLE IF EXISTS Activity;
+Create table If Not Exists Activity (machine_id int, process_id int, activity_type ENUM('start', 'end'), timestamp float);
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('0', '0', 'start', '0.712');
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('0', '0', 'end', '1.52');
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('0', '1', 'start', '3.14');
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('0', '1', 'end', '4.12');
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('1', '0', 'start', '0.55');
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('1', '0', 'end', '1.55');
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('1', '1', 'start', '0.43');
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('1', '1', 'end', '1.42');
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('2', '0', 'start', '4.1');
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('2', '0', 'end', '4.512');
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('2', '1', 'start', '2.5');
+insert into Activity (machine_id, process_id, activity_type, timestamp) values ('2', '1', 'end', '5');
+
+SELECT r.machine_id, ROUND(AVG(r.nn), 3) AS processing_time FROM (
+	SELECT machine_id,
+		SUM(
+			CASE activity_type
+				WHEN 'start' THEN ROUND(-timestamp, 3)
+				WHEN 'end' THEN ROUND(timestamp, 3)
+			END
+		) AS nn
+	FROM Activity
+	GROUP BY machine_id, process_id
+) AS r
+GROUP BY r.machine_id;
+
+SELECT a1.machine_id, ROUND(AVG(a2.timestamp-a1.timestamp), 3) AS processing_time FROM Activity AS a1
+INNER JOIN Activity AS a2
+ON a1.machine_id=a2.machine_id AND a1.process_id=a2.process_id AND a1.activity_type='start' AND a2.activity_type='end'
+GROUP BY a1.machine_id; 
+
+
+# Problem 1204
+DROP TABLE IF EXISTS Queue;
+Create table If Not Exists Queue (person_id int, person_name varchar(30), weight int, turn int);
+insert into Queue (person_id, person_name, weight, turn) values ('5', 'Alice', '250', '1');
+insert into Queue (person_id, person_name, weight, turn) values ('4', 'Bob', '175', '5');
+insert into Queue (person_id, person_name, weight, turn) values ('3', 'Alex', '350', '2');
+insert into Queue (person_id, person_name, weight, turn) values ('6', 'John Cena', '400', '3');
+insert into Queue (person_id, person_name, weight, turn) values ('1', 'Winston', '500', '6');
+insert into Queue (person_id, person_name, weight, turn) values ('2', 'Marie', '200', '4');
+
+SELECT q1.person_name
+FROM Queue AS q1
+WHERE (SELECT SUM(q2.weight) FROM Queue as q2 WHERE q2.turn <= q1.turn) <= 1000
+ORDER BY q1.turn DESC LIMIT 1;
+
+SELECT r.person_name FROM (
+	SELECT person_name, turn,
+		@running_total := @running_total + q.weight AS cum
+	FROM Queue AS q
+	INNER JOIN (SELECT @running_total := 0) AS r
+	ORDER BY q.turn ASC
+) AS r
+WHERE r.cum <= 1000
+ORDER BY r.turn DESC LIMIT 1;
+
+
+# Problem 607
+DROP TABLE IF EXISTS SalesPerson;
+Create table If Not Exists SalesPerson (sales_id int, name varchar(255), salary int, commission_rate int, hire_date date);
+insert into SalesPerson (sales_id, name, salary, commission_rate, hire_date) values ('1', 'John', '100000', '6', '2006-01-04');
+insert into SalesPerson (sales_id, name, salary, commission_rate, hire_date) values ('2', 'Amy', '12000', '5', '2010-01-05');
+insert into SalesPerson (sales_id, name, salary, commission_rate, hire_date) values ('3', 'Mark', '65000', '12', '2008-12-25');
+insert into SalesPerson (sales_id, name, salary, commission_rate, hire_date) values ('4', 'Pam', '25000', '25', '2005-01-01');
+insert into SalesPerson (sales_id, name, salary, commission_rate, hire_date) values ('5', 'Alex', '5000', '10', '2007-02-03');
+
+DROP TABLE IF EXISTS Company;
+Create table If Not Exists Company (com_id int, name varchar(255), city varchar(255));
+insert into Company (com_id, name, city) values ('1', 'RED', 'Boston');
+insert into Company (com_id, name, city) values ('2', 'ORANGE', 'New York');
+insert into Company (com_id, name, city) values ('3', 'YELLOW', 'Boston');
+insert into Company (com_id, name, city) values ('4', 'GREEN', 'Austin');
+
+DROP TABLE IF EXISTS Orders;
+Create table If Not Exists Orders (order_id int, order_date date, com_id int, sales_id int, amount int);
+insert into Orders (order_id, order_date, com_id, sales_id, amount) values ('1', '2014-01-01', '3', '4', '10000');
+insert into Orders (order_id, order_date, com_id, sales_id, amount) values ('2', '2014-02-01', '4', '5', '5000');
+insert into Orders (order_id, order_date, com_id, sales_id, amount) values ('3', '2014-03-01', '1', '1', '50000');
+insert into Orders (order_id, order_date, com_id, sales_id, amount) values ('4', '2014-04-01', '1', '4', '25000');
+
+SELECT s.name FROM SalesPerson AS s
+LEFT OUTER JOIN (
+	SELECT * FROM Orders
+	WHERE com_id IN (
+		SELECT com_Id FROM Company 
+		WHERE name = "RED"
+)) AS oc
+ON s.sales_id=oc.sales_id
+WHERE oc.order_id IS NULL;
+
+
+# Problem 586
+DROP TABLE IF EXISTS orders;
+Create table If Not Exists orders (order_number int, customer_number int);
+insert into orders (order_number, customer_number) values ('1', '1');
+insert into orders (order_number, customer_number) values ('2', '2');
+insert into orders (order_number, customer_number) values ('3', '3');
+insert into orders (order_number, customer_number) values ('4', '3');
+
+SELECT r.customer_number FROM(
+	SELECT customer_number,
+		COUNT(*) AS order_num
+	FROM orders
+	GROUP BY customer_number
+) AS r
+ORDER BY r.order_num DESC LIMIT 1;
