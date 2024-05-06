@@ -741,3 +741,117 @@ SELECT r.customer_number FROM(
 	GROUP BY customer_number
 ) AS r
 ORDER BY r.order_num DESC LIMIT 1;
+
+
+# Problem 2988
+DROP TABLE IF EXISTS Employees;
+Create table if not exists Employees ( emp_id int, emp_name varchar(50), dep_id int, position varchar(30));
+insert into Employees (emp_id, emp_name, dep_id, position) values ('156', 'Michael', '107', 'Manager');
+insert into Employees (emp_id, emp_name, dep_id, position) values ('112', 'Lucas', '107', 'Consultant');
+insert into Employees (emp_id, emp_name, dep_id, position) values ('8', 'Isabella', '101', 'Manager');
+insert into Employees (emp_id, emp_name, dep_id, position) values ('160', 'Joseph', '100', 'Manager');
+insert into Employees (emp_id, emp_name, dep_id, position) values ('80', 'Aiden', '100', 'Engineer');
+insert into Employees (emp_id, emp_name, dep_id, position) values ('190', 'Skylar', '100', 'Freelancer');
+insert into Employees (emp_id, emp_name, dep_id, position) values ('196', 'Stella', '101', 'Coordinator');
+insert into Employees (emp_id, emp_name, dep_id, position) values ('167', 'Audrey', '100', 'Consultant');
+insert into Employees (emp_id, emp_name, dep_id, position) values ('97', 'Nathan', '101', 'Supervisor');
+insert into Employees (emp_id, emp_name, dep_id, position) values ('128', 'Ian', '101', 'Administrator');
+insert into Employees (emp_id, emp_name, dep_id, position) values ('81', 'Ethan', '107', 'Administrator');
+
+SELECT e.emp_name AS manager_name, e.dep_id FROM Employees AS e
+INNER JOIN (
+	SELECT dep_id FROM Employees
+	GROUP BY dep_id
+	HAVING COUNT(*) = (
+	SELECT COUNT(*) AS num FROM Employees
+	GROUP BY dep_id
+    ORDER BY COUNT(*) DESC LIMIT 1
+)) AS d
+WHERE e.dep_id=d.dep_id AND e.position='Manager'
+ORDER BY e.dep_id ASC;
+
+WITH largest(dep_id, rnk) AS (
+	SELECT dep_id,
+		RANK() OVER (ORDER BY COUNT(*) DESC) AS rnk
+	FROM Employees
+	GROUP BY dep_id
+)
+SELECT emp_name AS manager_name, dep_id FROM Employees
+WHERE position='manager' AND dep_id IN (
+	SELECT dep_id FROM largest
+    WHERE rnk='1'
+)
+ORDER BY dep_id ASC;
+
+
+# Problem 1077
+DROP TABLE IF EXISTS Project;
+Create table If Not Exists Project (project_id int, employee_id int);
+insert into Project (project_id, employee_id) values ('1', '1');
+insert into Project (project_id, employee_id) values ('1', '2');
+insert into Project (project_id, employee_id) values ('1', '3');
+insert into Project (project_id, employee_id) values ('2', '1');
+insert into Project (project_id, employee_id) values ('2', '4');
+
+DROP TABLE IF EXISTS Employee;
+Create table If Not Exists Employee (employee_id int, name varchar(10), experience_years int);
+insert into Employee (employee_id, name, experience_years) values ('1', 'Khaled', '3');
+insert into Employee (employee_id, name, experience_years) values ('2', 'Ali', '2');
+insert into Employee (employee_id, name, experience_years) values ('3', 'John', '3');
+insert into Employee (employee_id, name, experience_years) values ('4', 'Doe', '2');
+
+WITH jointable AS (
+	SELECT p.project_id, e.employee_id, e.experience_years
+	FROM Project AS p
+	INNER JOIN Employee AS e
+	ON p.employee_id=e.employee_id
+)
+SELECT r.project_id, r.employee_id FROM (
+	SELECT project_id, experience_years, employee_id,
+		RANK() OVER (PARTITION BY project_id ORDER BY experience_years DESC) AS rnk
+	FROM jointable
+) AS r
+WHERE r.rnk=1;
+
+SELECT r.project_id, r.employee_id FROM (
+	SELECT p.project_id, p.employee_id,
+		RANK() OVER (PARTITION BY project_id ORDER BY experience_years DESC) AS rnk
+	FROM Project AS p
+	INNER JOIN Employee AS e
+	ON p.employee_id=e.employee_id
+) AS r
+WHERE r.rnk='1';
+
+
+# Problem 1715
+DROP TABLE IF EXISTS Boxes;
+Create table If Not Exists Boxes (box_id int, chest_id VARCHAR(255), apple_count int, orange_count int);
+insert into Boxes (box_id, chest_id, apple_count, orange_count) values ('2', 'None', '6', '15');
+insert into Boxes (box_id, chest_id, apple_count, orange_count) values ('18', 'None', '4', '15');
+insert into Boxes (box_id, chest_id, apple_count, orange_count) values ('19', 'None', '8', '4');
+insert into Boxes (box_id, chest_id, apple_count, orange_count) values ('12', 'None', '19', '20');
+insert into Boxes (box_id, chest_id, apple_count, orange_count) values ('20', 'None', '12', '9');
+insert into Boxes (box_id, chest_id, apple_count, orange_count) values ('8', 'None', '9', '9');
+insert into Boxes (box_id, chest_id, apple_count, orange_count) values ('3', 'None', '16', '7');
+
+DROP TABLE IF EXISTS Chests;
+Create table If Not Exists Chests (chest_id int, apple_count int, orange_count int);
+insert into Chests (chest_id, apple_count, orange_count) values ('6', '5', '6');
+insert into Chests (chest_id, apple_count, orange_count) values ('14', '20', '10');
+insert into Chests (chest_id, apple_count, orange_count) values ('2', '8', '8');
+insert into Chests (chest_id, apple_count, orange_count) values ('3', '19', '4');
+insert into Chests (chest_id, apple_count, orange_count) values ('16', '19', '19');
+
+SELECT 
+	SUM(r.bac)+IFNULL(SUM(r.cac), 0) AS apple_count,
+    SUM(r.boc)+IFNULL(SUM(r.coc), 0) AS orange_count
+FROM (
+	SELECT b.apple_count AS bac, b.orange_count AS boc, c.apple_count AS cac, c.orange_count AS coc FROM Boxes AS b
+	LEFT JOIN Chests AS c
+	USING (chest_id)
+) AS r;
+
+SELECT * FROM Boxes AS b
+LEFT JOIN Chests AS c
+USING (chest_id)
+
