@@ -1079,6 +1079,31 @@ Note:
 	we need all records in the Boxes table be kept.
 	
 	2. The `IFNULL` statement is important when there isn't any chests in the boxes
+	
+	
+Problem: 1270. All People Report to the Given Manager
+
+Intuition:
+The solution to this problem is trivial, we only have to conduct self join for two
+times (because the problem states that there will be no more than three indirect managers)
+
+Solution:
+SELECT e3.employee_id FROM Employees AS e4
+INNER JOIN (
+	SELECT e1.employee_id, e2.manager_id AS manager_of_manager_id FROM Employees AS e1
+	INNER JOIN Employees AS e2
+	ON e1.manager_id=e2.employee_id
+) AS e3
+ON e3.manager_of_manager_id=e4.employee_id
+WHERE e4.manager_id=1 AND e3.employee_id != 1;
+
+Modified Solution:
+SELECT e1.employee_id
+FROM Employees AS e1, Employees AS e2, Employees AS e3
+WHERE e1.manager_id=e2.employee_id AND e2.manager_id=e3.employee_id AND e1.employee_id != 1 AND e3.manager_id=1;
+
+Modified Solution Explained:
+It basically does the same things but its syntax is more simple
 
 
 	
