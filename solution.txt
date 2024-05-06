@@ -930,6 +930,157 @@ SELECT r.customer_number FROM(
 	GROUP BY customer_number
 ) AS r
 ORDER BY r.order_num DESC LIMIT 1;
+
+
+Problem: 2988. Manager of the Largest Department
+
+Intuition:
+We can solve this problem step by step with the following
+
+	1. Find out how many employees are there in the largest department
+	2. Filter out department that has that has the most employees
+	3. Find out their managers
+	
+Approach:
+1: Find out how many employees are there in the largest department
+
+	SELECT COUNT(*) AS num FROM Employees
+	GROUP BY dep_id
+    ORDER BY COUNT(*) DESC LIMIT 1;
+
+2: Filter out department that has that has the most employees
+
+	SELECT dep_id FROM Employees
+	GROUP BY dep_id
+	HAVING COUNT(*) = (SUBQUERY)
+	
+3: Find out how many employees are there in the largest department
+Here, I make use of INNER JOIN to filter out the rows we need. This 
+query does two things: find the employees that belongs to the largest 
+department and whose position is manager
+
+	SELECT e.emp_name AS manager_name, e.dep_id FROM Employees AS e
+	INNER JOIN (SUBTABLE) AS d
+	WHERE e.dep_id=d.dep_id AND e.position='Manager'
+	ORDER BY e.dep_id ASC;
+	
+Solution:
+SELECT e.emp_name AS manager_name, e.dep_id FROM Employees AS e
+INNER JOIN (
+	SELECT dep_id FROM Employees
+	GROUP BY dep_id
+	HAVING COUNT(*) = (
+	SELECT COUNT(*) AS num FROM Employees
+	GROUP BY dep_id
+    ORDER BY COUNT(*) DESC LIMIT 1
+)) AS d
+WHERE e.dep_id=d.dep_id AND e.position='Manager'
+ORDER BY e.dep_id ASC;
+
+Modified Solution:
+WITH largest(dep_id, rnk) AS (
+	SELECT dep_id,
+		RANK() OVER (ORDER BY COUNT(*) DESC) AS rnk
+	FROM Employees
+	GROUP BY dep_id
+)
+SELECT emp_name AS manager_name, dep_id FROM Employees
+WHERE position='manager' AND dep_id IN (
+	SELECT dep_id FROM largest
+    WHERE rnk='1'
+)
+ORDER BY dep_id ASC;
+
+Modified Solution Explained:
+The solution provides an alternative approach using Common Table Expression (CTE)
+that provides better readability
+
+
+Problem: 1077. Project Employees III
+
+Intuition:
+We can break this problem into the following steps
+
+	1. Find out the years of most experienced employees in each project
+	2. Filter out the id of employees whose experience years are equal
+	to the number found for each project
+	
+However, we have to deal with the join problem, which makes this problem a little
+bit complicated
+
+Approach:
+Firstly, we must acquire a join table for use. Therefore, I use the CTE 
+
+	WITH jointable AS (
+		SELECT p.project_id, e.employee_id, e.experience_years
+		FROM Project AS p
+		INNER JOIN Employee AS e
+		ON p.employee_id=e.employee_id
+	)
+	
+Next, with this CTE, we can find out the years of most experienced employees in each
+project
+
+	SELECT project_id, experience_years, employee_id,
+		RANK() OVER (PARTITION BY project_id ORDER BY experience_years DESC) AS rnk
+	FROM jointable
+	
+Eventually, we can filter out the row that has marked rnk as 1
+
+	SELECT r.project_id, r.employee_id FROM (SUBTABLE) AS r
+	WHERE r.rnk=1;
+	
+Solution:
+WITH jointable AS (
+	SELECT p.project_id, e.employee_id, e.experience_years
+	FROM Project AS p
+	INNER JOIN Employee AS e
+	ON p.employee_id=e.employee_id
+)
+SELECT r.project_id, r.employee_id FROM (
+	SELECT project_id, experience_years, employee_id,
+		RANK() OVER (PARTITION BY project_id ORDER BY experience_years DESC) AS rnk
+	FROM jointable
+) AS r
+WHERE r.rnk=1;
+	
+Modified Solution:
+SELECT r.project_id, r.employee_id FROM (
+	SELECT p.project_id, p.employee_id,
+		RANK() OVER (PARTITION BY project_id ORDER BY experience_years DESC) AS rnk
+	FROM Project AS p
+	INNER JOIN Employee AS e
+	ON p.employee_id=e.employee_id
+) AS r
+WHERE r.rnk='1'
+
+Modified Solution Explained:
+In this solution, we combine join operation and ranking in the same step. This method
+makes our query cleaner
+
+
+Problem: 1715. Count Apples and Oranges
+
+Intution:
+This is a trivial problem but some small parts need to be noticed
+
+Solution:
+SELECT 
+	SUM(r.bac)+IFNULL(SUM(r.cac), 0) AS apple_count,
+    SUM(r.boc)+IFNULL(SUM(r.coc), 0) AS orange_count
+FROM (
+	SELECT b.apple_count AS bac, b.orange_count AS boc, c.apple_count AS cac, c.orange_count AS coc FROM Boxes AS b
+	LEFT JOIN Chests AS c
+	USING (chest_id)
+) AS r;
+
+Note:
+	1. When performing the join operation, we MUST use outer join. The reason is that
+	we need all records in the Boxes table be kept.
+	
+	2. The `IFNULL` statement is important when there isn't any chests in the boxes
+
+
 	
 
 	
