@@ -851,7 +851,168 @@ FROM (
 	USING (chest_id)
 ) AS r;
 
-SELECT * FROM Boxes AS b
-LEFT JOIN Chests AS c
-USING (chest_id)
+
+# Problem 1270
+DROP TABLE IF EXISTS Employees;
+Create table If Not Exists Employees (employee_id int, employee_name varchar(30), manager_id int);
+insert into Employees (employee_id, employee_name, manager_id) values ('1', 'Boss', '1');
+insert into Employees (employee_id, employee_name, manager_id) values ('3', 'Alice', '3');
+insert into Employees (employee_id, employee_name, manager_id) values ('2', 'Bob', '1');
+insert into Employees (employee_id, employee_name, manager_id) values ('4', 'Daniel', '2');
+insert into Employees (employee_id, employee_name, manager_id) values ('7', 'Luis', '4');
+insert into Employees (employee_id, employee_name, manager_id) values ('8', 'John', '3');
+insert into Employees (employee_id, employee_name, manager_id) values ('9', 'Angela', '8');
+insert into Employees (employee_id, employee_name, manager_id) values ('77', 'Robert', '1');
+
+SELECT e3.employee_id FROM Employees AS e4
+INNER JOIN (
+	SELECT e1.employee_id, e2.manager_id AS manager_of_manager_id FROM Employees AS e1
+	INNER JOIN Employees AS e2
+	ON e1.manager_id=e2.employee_id
+) AS e3
+ON e3.manager_of_manager_id=e4.employee_id
+WHERE e4.manager_id=1 AND e3.employee_id != 1;
+
+SELECT e1.employee_id
+FROM Employees AS e1, Employees AS e2, Employees AS e3
+WHERE e1.manager_id=e2.employee_id AND e2.manager_id=e3.employee_id AND e1.employee_id != 1 AND e3.manager_id=1;
+
+
+# Problem 1445
+DROP TABLE IF EXISTS Sales;
+Create table If Not Exists Sales (sale_date date, fruit ENUM('apples', 'oranges'), sold_num int);
+insert into Sales (sale_date, fruit, sold_num) values ('2020-05-01', 'apples', '10');
+insert into Sales (sale_date, fruit, sold_num) values ('2020-05-01', 'oranges', '8');
+insert into Sales (sale_date, fruit, sold_num) values ('2020-05-02', 'apples', '15');
+insert into Sales (sale_date, fruit, sold_num) values ('2020-05-02', 'oranges', '15');
+insert into Sales (sale_date, fruit, sold_num) values ('2020-05-03', 'apples', '20');
+insert into Sales (sale_date, fruit, sold_num) values ('2020-05-03', 'oranges', '0');
+insert into Sales (sale_date, fruit, sold_num) values ('2020-05-04', 'apples', '15');
+insert into Sales (sale_date, fruit, sold_num) values ('2020-05-04', 'oranges', '16');
+
+SELECT r.sale_date,
+	SUM(r.arg) AS diff
+FROM (
+	SELECT *,
+		CASE fruit
+			WHEN 'apples' THEN sold_num
+			WHEN 'oranges' THEN -sold_num
+		END AS arg
+	FROM Sales
+) AS r
+GROUP BY r.sale_date
+ORDER BY r.sale_date ASC;
+
+# Problem 1355
+DROP TABLE IF EXISTS Friendsl;
+Create table If Not Exists Friends (id int, name varchar(30), activity varchar(30));
+insert into Friends (id, name, activity) values ('1', 'Jonathan D.', 'Eating');
+insert into Friends (id, name, activity) values ('2', 'Jade W.', 'Singing');
+insert into Friends (id, name, activity) values ('3', 'Victor J.', 'Singing');
+insert into Friends (id, name, activity) values ('4', 'Elvis Q.', 'Eating');
+insert into Friends (id, name, activity) values ('5', 'Daniel A.', 'Eating');
+insert into Friends (id, name, activity) values ('6', 'Bob B.', 'Horse Riding');
+
+DROP TABLE IF EXISTS Activities;
+Create table If Not Exists Activities (id int, name varchar(30));
+insert into Activities (id, name) values ('1', 'Eating');
+insert into Activities (id, name) values ('2', 'Singing');
+insert into Activities (id, name) values ('3', 'Horse Riding');
+
+SELECT r.activity FROM (
+	SELECT activity,
+		RANK() OVER (ORDER BY COUNT(*) ASC) AS asc_rank,
+		RANK() OVER (ORDER BY COUNT(*) DESC) AS desc_rank
+	FROM Friends
+	GROUP BY activity
+) AS r
+WHERE r.asc_rank != 1 AND r.desc_rank != 1;
+
+
+# Problem 2020
+DROP TABLE IF EXISTS Subscriptions;
+Create table If Not Exists Subscriptions (account_id int, start_date date, end_date date);
+insert into Subscriptions (account_id, start_date, end_date) values ('9', '2020-02-18', '2021-10-30');
+insert into Subscriptions (account_id, start_date, end_date) values ('3', '2021-09-21', '2021-11-13');
+insert into Subscriptions (account_id, start_date, end_date) values ('11', '2020-02-28', '2020-08-18');
+insert into Subscriptions (account_id, start_date, end_date) values ('13', '2021-04-20', '2021-09-22');
+insert into Subscriptions (account_id, start_date, end_date) values ('4', '2020-10-26', '2021-05-08');
+insert into Subscriptions (account_id, start_date, end_date) values ('5', '2020-09-11', '2021-01-17');
+
+DROP TABLE IF EXISTS Streams;
+Create table If Not Exists Streams (session_id int, account_id int, stream_date date);
+insert into Streams (session_id, account_id, stream_date) values ('14', '9', '2020-05-16');
+insert into Streams (session_id, account_id, stream_date) values ('16', '3', '2021-10-27');
+insert into Streams (session_id, account_id, stream_date) values ('18', '11', '2020-04-29');
+insert into Streams (session_id, account_id, stream_date) values ('17', '13', '2021-08-08');
+insert into Streams (session_id, account_id, stream_date) values ('19', '4', '2020-12-31');
+insert into Streams (session_id, account_id, stream_date) values ('13', '5', '2021-01-05');
+
+SELECT COUNT(*) AS accounts_count FROM Subscriptions AS sub
+LEFT OUTER JOIN Streams AS str
+USING (account_id)
+WHERE (YEAR(start_date) = '2021' OR YEAR(end_date) = '2021') AND (str.session_id IS NULL OR YEAR(str.stream_date) != '2021');
+
+
+# Problem 2051
+DROP TABLE IF EXISTS Members;
+Create table If Not Exists Members (member_id int, name varchar(30));
+insert into Members (member_id, name) values ('9', 'Alice');
+insert into Members (member_id, name) values ('11', 'Bob');
+insert into Members (member_id, name) values ('3', 'Winston');
+insert into Members (member_id, name) values ('8', 'Hercy');
+insert into Members (member_id, name) values ('1', 'Narihan');
+
+DROP TABLE IF EXISTS Visits;
+Create table If Not Exists Visits (visit_id int, member_id int, visit_date date);
+insert into Visits (visit_id, member_id, visit_date) values ('22', '11', '2021-10-28');
+insert into Visits (visit_id, member_id, visit_date) values ('16', '11', '2021-01-12');
+insert into Visits (visit_id, member_id, visit_date) values ('18', '9', '2021-12-10');
+insert into Visits (visit_id, member_id, visit_date) values ('19', '3', '2021-10-19');
+insert into Visits (visit_id, member_id, visit_date) values ('12', '11', '2021-03-01');
+insert into Visits (visit_id, member_id, visit_date) values ('17', '8', '2021-05-07');
+insert into Visits (visit_id, member_id, visit_date) values ('21', '9', '2021-05-12');
+
+DROP TABLE IF EXISTS Purchases;
+Create table If Not Exists Purchases (visit_id int, charged_amount int);
+insert into Purchases (visit_id, charged_amount) values ('12', '2000');
+insert into Purchases (visit_id, charged_amount) values ('18', '9000');
+insert into Purchases (visit_id, charged_amount) values ('17', '7000');
+
+
+WITH jointable AS(
+	SELECT member_id, name, 
+		COUNT(CASE WHEN visit_id IS NOT NULL THEN 1 ELSE NULL END) AS visit_count,
+        COUNT(CASE WHEN charged_amount IS NOT NULL THEN 1 ELSE NULL END) AS buy_count
+    FROM Members AS m
+	LEFT OUTER JOIN (
+		SELECT * FROM Visits AS v
+		LEFT OUTER JOIN Purchases AS p
+		USING (visit_id)
+	) AS vp
+	USING (member_id)
+    GROUP BY member_id, name
+)
+
+SELECT member_id, name,
+	CASE
+		WHEN visit_count = 0 THEN 'Bronze'
+		WHEN (100*buy_count/visit_count) >= 80 THEN 'Diamond'
+        WHEN (100*buy_count/visit_count) >= 50 THEN 'Gold'
+        ELSE 'Silver'
+    END AS category
+FROM jointable
+GROUP BY member_id, name;
+
+SELECT member_id, name,
+	CASE
+		WHEN COUNT(v.visit_id) = 0 THEN 'Bronze'
+        WHEN 100*COUNT(p.visit_id)/COUNT(v.visit_id) >= 80 THEN 'Diamond'
+        WHEN 100*COUNT(p.visit_id)/COUNT(v.visit_id) >= 50 THEN 'Gold'
+        ELSE 'Silver'
+    END AS category
+FROM Members AS m
+LEFT JOIN Visits AS v USING (member_id)
+LEFT JOIN Purchases AS p USING (visit_id)
+GROUP BY member_id, name
 
