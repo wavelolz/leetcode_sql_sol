@@ -1014,5 +1014,68 @@ SELECT member_id, name,
 FROM Members AS m
 LEFT JOIN Visits AS v USING (member_id)
 LEFT JOIN Purchases AS p USING (visit_id)
-GROUP BY member_id, name
+GROUP BY member_id, name;
 
+
+# Problem 2308
+DROP TABLE IF EXISTS Genders;
+Create table If Not Exists Genders (user_id int, gender ENUM('female', 'other', 'male'));
+insert into Genders (user_id, gender) values ('4', 'male');
+insert into Genders (user_id, gender) values ('7', 'female');
+insert into Genders (user_id, gender) values ('2', 'other');
+insert into Genders (user_id, gender) values ('5', 'male');
+insert into Genders (user_id, gender) values ('3', 'female');
+insert into Genders (user_id, gender) values ('8', 'male');
+insert into Genders (user_id, gender) values ('6', 'other');
+insert into Genders (user_id, gender) values ('1', 'other');
+insert into Genders (user_id, gender) values ('9', 'female');
+
+WITH indextable AS (
+	SELECT *,
+		CASE gender
+			WHEN 'female' THEN 1
+			WHEN 'other' THEN 2
+			WHEN 'male' THEN 3
+		END AS inx1,
+		ROW_NUMBER() OVER (PARTITION BY gender ORDER BY user_id ASC) AS inx2
+	FROM Genders
+)
+SELECT user_id, gender FROM indextable
+ORDER BY inx2, inx1;
+
+
+# Problem 1951
+DROP TABLE IF EXISTS Relations;
+Create table If Not Exists Relations (user_id int, follower_id int);
+insert into Relations (user_id, follower_id) values ('1', '3');
+insert into Relations (user_id, follower_id) values ('2', '3');
+insert into Relations (user_id, follower_id) values ('7', '3');
+insert into Relations (user_id, follower_id) values ('1', '4');
+insert into Relations (user_id, follower_id) values ('2', '4');
+insert into Relations (user_id, follower_id) values ('7', '4');
+insert into Relations (user_id, follower_id) values ('1', '5');
+insert into Relations (user_id, follower_id) values ('2', '6');
+insert into Relations (user_id, follower_id) values ('7', '5');
+
+SELECT r.user1_id , r.user2_id FROM (
+	SELECT r1.user_id AS user1_id, r2.user_id AS user2_id, 
+		RANK() OVER (ORDER BY COUNT(*) DESC) AS rnk
+	FROM Relations AS r1, Relations AS r2
+	WHERE r1.user_id < r2.user_id AND r1.follower_id = r2.follower_id
+	GROUP BY r1.user_id, r2.user_id
+) AS r
+WHERE r.rnk = 1
+ORDER BY r.user1_id, r.user2_id;
+
+
+# Problem 3140
+DROP TABLE IF EXISTS Cinema;
+CREATE TABLE if Not exists Cinema (
+    seat_id INT,
+    free BOOLEAN
+);
+insert into Cinema (seat_id, free) values ('1', '1');
+insert into Cinema (seat_id, free) values ('2', '0');
+insert into Cinema (seat_id, free) values ('3', '1');
+insert into Cinema (seat_id, free) values ('4', '1');
+insert into Cinema (seat_id, free) values ('5', '1');

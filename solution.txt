@@ -1282,4 +1282,139 @@ GROUP BY member_id, name
 Modified Solution Explained:
 This solution basically does the same thing, but with simpler syntax
 
+
+Problem: 2308. Arrange Table by Gender
+
+Intuition:
+When reading this problem, it soon appears to me that it is a double sorting 
+question. We have to sort by the id based on each category first and then
+sort the category according to 'female', 'other', 'male'. Therefore, the approach
+would be to create two columns for sorting
+
+Approach:
+To sort by the id based on each category, we use
+
+	SELECT 
+		ROW_NUMBER() OVER (PARTITION BY gender ORDER BY user_id ASC) AS inx2
+	FROM Genders
+	
+To sort the category according to 'female', 'other', 'male', we use
+
+	SELECT
+		CASE gender
+			WHEN 'female' THEN 1
+			WHEN 'other' THEN 2
+			WHEN 'male' THEN 3
+		END AS inx1
+	FROM Genders
+	
+Then we use CTE to acquire the desired output
+
+Solution:
+WITH indextable AS (
+	SELECT *,
+		CASE gender
+			WHEN 'female' THEN 1
+			WHEN 'other' THEN 2
+			WHEN 'male' THEN 3
+		END AS inx1,
+		ROW_NUMBER() OVER (PARTITION BY gender ORDER BY user_id ASC) AS inx2
+	FROM Genders
+)
+SELECT user_id, gender FROM indextable
+ORDER BY inx2, inx1;
+
+
+Problem: 1951. All the Pairs With the Maximum Number of Common Followers
+
+Intuition:
+The most important thing to this question is how to create pairs. It turns out 
+that Correlated Query can do this. After this, the code would speak itself
+
+Approach:
+First, we use the Correlated Query to create all the pairs
+
+	SELECT r1.user_id, r2.user_id
+	FROM Relations AS r1, Relations AS r2
+	WHERE r1.user_id < r2.user_id
+	
+Now, we have a table with all the pairs of user_id. Next we can find the rows 
+that have common followers by changing the `WHERE` statement to
+
+	WHERE r1.user_id < r2.user_id AND r1.follower_id = r2.follower_id
+	
+OK now, we can count how many common followers are there for each pair
+
+	SELECT r1.user_id AS user1_id, r2.user_id AS user2_id, 
+		RANK() OVER (ORDER BY COUNT(*) DESC) AS rnk
+	FROM Relations AS r1, Relations AS r2
+	WHERE r1.user_id < r2.user_id AND r1.follower_id = r2.follower_id
+	GROUP BY r1.user_id, r2.user_id
+	
+Eventually, we filter out the row that has rnk=1, which is the result
+
+Solution:
+SELECT r.user1_id , r.user2_id FROM (
+	SELECT r1.user_id AS user1_id, r2.user_id AS user2_id, 
+		RANK() OVER (ORDER BY COUNT(*) DESC) AS rnk
+	FROM Relations AS r1, Relations AS r2
+	WHERE r1.user_id < r2.user_id AND r1.follower_id = r2.follower_id
+	GROUP BY r1.user_id, r2.user_id
+) AS r
+WHERE r.rnk = 1
+ORDER BY r.user1_id, r.user2_id;
+
+
+Problem: 3140: Consecutive Available Seats II
+
+Intuition:
+As this is a problem that is similar to cumulative sum, where we have to
+look at the previous row, we immediately come up with the use of variable.
+The usage of variable here is to mark the numbers of consecutive seat. 
+Therefore, we can combine variables with `CASE WHEN` statement
+
+Approach:
+Firstly, we create a variable that can compute the cumulative sum of the 
+column free. Of course this is not we want, but we'll modify it later
+
+	SELECT *,
+		@running_total := @running_total + c.free
+	FROM Cinema AS c
+	INNER JOIN (SELECT @running_tatal := 0) AS r
+	
+Then we can modify the variable to meet our needs. Here we want the variable
+to plus 1 if next seat is available, and becomes 0 if next seat is unavailable
+
+	CASE free
+		WHEN 1 THEN @running_total := @running_total + c.free
+		WHEN 0 THEN @running_total := 0
+	END
+	AS consecutive_inx
+	
+Alright, now our target row becomes those who has the maximum consecitive_inx.
+Meaning that
+
+	WHERE consecutive_inx = (SELECT MAX(consecutive_inx) FROM consecutivetable);
+	
+In the end, we just have to modify the output to fit the format
+
+Solution:
+WITH consecutivetable AS (
+	SELECT *,
+		CASE free
+			WHEN 1 THEN @running_total := @running_total + c.free
+			WHEN 0 THEN @running_total := 0
+		END
+		AS consecutive_inx
+	FROM Cinema AS c
+	INNER JOIN (SELECT @running_total := 0) AS r
+)
+SELECT 
+	seat_id-consecutive_inx+1 AS first_seat_id,
+    seat_id AS last_seat_id,
+    consecutive_inx AS consecutive_seats_len
+FROM consecutivetable
+WHERE consecutive_inx = (SELECT MAX(consecutive_inx) FROM consecutivetable);
+
+
 	
