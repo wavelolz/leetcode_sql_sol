@@ -1417,4 +1417,111 @@ FROM consecutivetable
 WHERE consecutive_inx = (SELECT MAX(consecutive_inx) FROM consecutivetable);
 
 
+Problem: 1532. The Most Recent Three Orders
+
+Intution:
+Originally, I think of an idea by combining GROUP BY and ORDER BY. However, it
+turns out that the logic is invalid. So the alternative would be to use RANK
+
+Approach:
+I used RANK to find out the most recent orders for each customer
+
+	SELECT c.customer_id, c.name, o.order_id, o.order_date,
+		RANK() OVER (PARTITION BY c.customer_id, c.name ORDER BY o.order_date DESC) AS rnk
+	FROM Customers AS c
+	INNER JOIN Orders AS o
+	ON c.customer_id=o.customer_id
+	
+After that, we can filter out those rows with rnk <= 3 to get the desired output
+
+Solution:
+SELECT r.name AS customer_name, r.customer_id, r.order_id, r.order_date FROM (
+	SELECT c.customer_id, c.name, o.order_id, o.order_date,
+		RANK() OVER (PARTITION BY c.customer_id, c.name ORDER BY o.order_date DESC) AS rnk
+	FROM Customers AS c
+	INNER JOIN Orders AS o
+	ON c.customer_id=o.customer_id
+) AS r
+WHERE r.rnk <= 3
+ORDER BY r.name ASC, r.customer_id ASC, r.order_date DESC
+
+
+Problem: 1875. Group Employees of the Same Salary
+
+Intuition:
+The idea is to find out the frequency of every unique salary, drop those salaries with
+frequency=1 and then denote those rows with a team id
+
+Approach:
+Firstly, we want to find out the frequency of every unique salary
+
+	SELECT salary,
+		COUNT(*) AS freq
+	FROM Employees
+	GROUP BY salary
+	
+Next, we want to keep those salary rows with frequency > 1. For syntax simplicity, we 
+can use HAVING here
+
+	SELECT salary,  
+	FROM Employees
+	GROUP BY salary
+	HAVING COUNT(*) > 1
+	
+Then we can denote the rows with team id by using ROW_NUMBER
+
+	ROW_NUMBER() OVER (ORDER BY salary ASC) AS team_id
+	
+Then just join this query with the original one then we can solve this problem
+
+Solution:
+SELECT e.employee_id, e.name, e.salary, r.team_id FROM Employees AS e
+INNER JOIN (
+	SELECT salary,  
+		ROW_NUMBER() OVER (ORDER BY salary ASC) AS team_id
+	FROM Employees
+	GROUP BY salary
+	HAVING COUNT(*) > 1
+) AS r
+ON e.salary=r.salary
+ORDER BY r.team_id ASC, e.employee_id ASC;
+
+
+Problem: 2854. Rolling Average Steps
+
+Intuition:
+The first task is to determine whether the rows are consecutive days, and then
+we have to compute the average based on the results
+
+Approach:
+Here, we will create an additional column to mark the previous 2th row. 
+
+	SELECT *,
+		LAG(steps_date, 2) OVER(PARTITION BY user_id ORDER BY steps_date ASC) AS two_rows_before
+	FROM Steps
+	
+The reason we create this column is that when comparing this column with steps_date, we can then
+immediately know that whether the 3-day rolling average is valid. Then we will compute the rolling
+average for all the records now
+
+	SELECT *,
+		ROUND(AVG(steps_count) OVER (PARTITION BY user_id ORDER BY steps_date ASC ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2) AS rolling_average,
+	FROM Steps
+	
+The use of ROWS BETWEEN computes the average of consecutive 3 rows. Now we just have to keep the 
+valid rows by adding
+
+	WHERE DATEDIFF(steps_date, two_rows_before) = 2
+	
+Solution:
+SELECT r.user_id, r.steps_date, r.rolling_average FROM (
+	SELECT *,
+		ROUND(AVG(steps_count) OVER (PARTITION BY user_id ORDER BY steps_date ASC ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2) AS rolling_average,
+		LAG(steps_date, 2) OVER(PARTITION BY user_id ORDER BY steps_date ASC) AS two_rows_before
+	FROM Steps
+) AS r
+WHERE DATEDIFF(r.steps_date, r.two_rows_before) = 2
+ORDER BY r.user_id, r.steps_date;
+
+
 	

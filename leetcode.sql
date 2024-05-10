@@ -1079,3 +1079,88 @@ insert into Cinema (seat_id, free) values ('2', '0');
 insert into Cinema (seat_id, free) values ('3', '1');
 insert into Cinema (seat_id, free) values ('4', '1');
 insert into Cinema (seat_id, free) values ('5', '1');
+
+
+# Problem 1532
+DROP TABLE IF EXISTS Customers;
+Create table If Not Exists Customers (customer_id int, name varchar(10));
+insert into Customers (customer_id, name) values ('1', 'Winston');
+insert into Customers (customer_id, name) values ('2', 'Jonathan');
+insert into Customers (customer_id, name) values ('3', 'Annabelle');
+insert into Customers (customer_id, name) values ('4', 'Marwan');
+insert into Customers (customer_id, name) values ('5', 'Khaled');
+
+DROP TABLE IF EXISTS Orders;
+Create table If Not Exists Orders (order_id int, order_date date, customer_id int, cost int);
+insert into Orders (order_id, order_date, customer_id, cost) values ('1', '2020-07-31', '1', '30');
+insert into Orders (order_id, order_date, customer_id, cost) values ('2', '2020-7-30', '2', '40');
+insert into Orders (order_id, order_date, customer_id, cost) values ('3', '2020-07-31', '3', '70');
+insert into Orders (order_id, order_date, customer_id, cost) values ('4', '2020-07-29', '4', '100');
+insert into Orders (order_id, order_date, customer_id, cost) values ('5', '2020-06-10', '1', '1010');
+insert into Orders (order_id, order_date, customer_id, cost) values ('6', '2020-08-01', '2', '102');
+insert into Orders (order_id, order_date, customer_id, cost) values ('7', '2020-08-01', '3', '111');
+insert into Orders (order_id, order_date, customer_id, cost) values ('8', '2020-08-03', '1', '99');
+insert into Orders (order_id, order_date, customer_id, cost) values ('9', '2020-08-07', '2', '32');
+insert into Orders (order_id, order_date, customer_id, cost) values ('10', '2020-07-15', '1', '2');
+
+SELECT r.name AS customer_name, r.customer_id, r.order_id, r.order_date FROM (
+	SELECT c.customer_id, c.name, o.order_id, o.order_date,
+		RANK() OVER (PARTITION BY c.customer_id, c.name ORDER BY o.order_date DESC) AS rnk
+	FROM Customers AS c
+	INNER JOIN Orders AS o
+	ON c.customer_id=o.customer_id
+) AS r
+WHERE r.rnk <= 3
+ORDER BY r.name ASC, r.customer_id ASC, r.order_date DESC;
+
+
+# Problem 1875
+DROP TABLE IF EXISTS Employees;
+Create table If Not Exists Employees (employee_id int, name varchar(30), salary int);
+insert into Employees (employee_id, name, salary) values ('2', 'Meir', '3000');
+insert into Employees (employee_id, name, salary) values ('3', 'Michael', '3000');
+insert into Employees (employee_id, name, salary) values ('7', 'Addilyn', '7400');
+insert into Employees (employee_id, name, salary) values ('8', 'Juan', '6100');
+insert into Employees (employee_id, name, salary) values ('9', 'Kannon', '7400');
+
+SELECT e.employee_id, e.name, e.salary, r.team_id FROM Employees AS e
+INNER JOIN (
+	SELECT salary,  
+		ROW_NUMBER() OVER (ORDER BY salary ASC) AS team_id
+	FROM Employees
+	GROUP BY salary
+	HAVING COUNT(*) > 1
+) AS r
+ON e.salary=r.salary
+ORDER BY r.team_id ASC, e.employee_id ASC;
+
+
+# Problem 2854
+DROP TABLE IF EXISTS Steps;
+Create table if not exists Steps(user_id int, steps_count int, steps_date date);
+insert into Steps (user_id, steps_count, steps_date) values ('1', '687', '2021-09-02');
+insert into Steps (user_id, steps_count, steps_date) values ('1', '395', '2021-09-04');
+insert into Steps (user_id, steps_count, steps_date) values ('1', '499', '2021-09-05');
+insert into Steps (user_id, steps_count, steps_date) values ('1', '712', '2021-09-06');
+insert into Steps (user_id, steps_count, steps_date) values ('1', '576', '2021-09-07');
+insert into Steps (user_id, steps_count, steps_date) values ('2', '153', '2021-09-06');
+insert into Steps (user_id, steps_count, steps_date) values ('2', '171', '2021-09-07');
+insert into Steps (user_id, steps_count, steps_date) values ('2', '530', '2021-09-08');
+insert into Steps (user_id, steps_count, steps_date) values ('3', '945', '2021-09-04');
+insert into Steps (user_id, steps_count, steps_date) values ('3', '120', '2021-09-07');
+insert into Steps (user_id, steps_count, steps_date) values ('3', '557', '2021-09-08');
+insert into Steps (user_id, steps_count, steps_date) values ('3', '840', '2021-09-09');
+insert into Steps (user_id, steps_count, steps_date) values ('3', '627', '2021-09-10');
+insert into Steps (user_id, steps_count, steps_date) values ('5', '382', '2021-09-05');
+insert into Steps (user_id, steps_count, steps_date) values ('6', '480', '2021-09-01');
+insert into Steps (user_id, steps_count, steps_date) values ('6', '191', '2021-09-02');
+insert into Steps (user_id, steps_count, steps_date) values ('6', '303', '2021-09-05');
+
+SELECT r.user_id, r.steps_date, r.rolling_average FROM (
+	SELECT *,
+		ROUND(AVG(steps_count) OVER (PARTITION BY user_id ORDER BY steps_date ASC ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2) AS rolling_average,
+		LAG(steps_date, 2) OVER(PARTITION BY user_id ORDER BY steps_date ASC) AS two_rows_before
+	FROM Steps
+) AS r
+WHERE DATEDIFF(r.steps_date, r.two_rows_before) = 2
+ORDER BY r.user_id, r.steps_date;
