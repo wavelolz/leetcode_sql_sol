@@ -1164,3 +1164,130 @@ SELECT r.user_id, r.steps_date, r.rolling_average FROM (
 ) AS r
 WHERE DATEDIFF(r.steps_date, r.two_rows_before) = 2
 ORDER BY r.user_id, r.steps_date;
+
+
+# Problem 2159
+DROP TABLE IF EXISTS Data;
+Create table If Not Exists Data (first_col int, second_col int);
+insert into Data (first_col, second_col) values ('4', '2');
+insert into Data (first_col, second_col) values ('2', '3');
+insert into Data (first_col, second_col) values ('3', '1');
+insert into Data (first_col, second_col) values ('1', '4');
+
+SELECT d1.first_col, d2.second_col FROM (
+	SELECT first_col, ROW_NUMBER() OVER (ORDER BY first_col ASC) AS rnum1 FROM Data
+) AS d1
+INNER JOIN (
+	SELECT second_col, ROW_NUMBER() OVER (ORDER BY second_col DESC) AS rnum2 FROM Data
+) AS d2
+ON d1.rnum1=d2.rnum2;
+
+
+# Problem 2175
+DROP TABLE IF EXISTS TeamPoints;
+Create table If Not Exists TeamPoints (team_id int, name varchar(100), points int);
+insert into TeamPoints (team_id, name, points) values ('3', 'Algeria', '1431');
+insert into TeamPoints (team_id, name, points) values ('1', 'Senegal', '2132');
+insert into TeamPoints (team_id, name, points) values ('2', 'New Zealand', '1402');
+insert into TeamPoints (team_id, name, points) values ('4', 'Croatia', '1817');
+
+DROP TABLE IF EXISTS PointsChange;
+Create table If Not Exists PointsChange (team_id int, points_change int);
+insert into PointsChange (team_id, points_change) values ('3', '399');
+insert into PointsChange (team_id, points_change) values ('2', '0');
+insert into PointsChange (team_id, points_change) values ('4', '13');
+insert into PointsChange (team_id, points_change) values ('1', '-22');
+
+SELECT tp.team_id, tp.name,
+	CAST(ROW_NUMBER() OVER (ORDER BY tp.points DESC, tp.name ASC) AS SIGNED) - 
+    CAST(ROW_NUMBER() OVER (ORDER BY tp.points+pc.points_change DESC, tp.name ASC) AS SIGNED) AS rank_diff
+FROM TeamPoints AS tp
+LEFT JOIN PointsChange AS pc
+USING (team_id);
+
+WITH totalpointchangetable AS (
+	SELECT tp.team_id,
+		SUM(points_change) AS total_points_change,
+        ROW_NUMBER() OVER (ORDER BY SUM(tp.points) DESC) AS old_rank
+	FROM TeamPoints AS tp
+	INNER JOIN PointsChange AS pc
+	USING (team_id)
+	GROUP BY tp.team_id, tp.name
+)
+
+SELECT tp.team_id, tp.name,
+	CAST(tpct.old_rank AS SIGNED) - CAST(ROW_NUMBER() OVER (ORDER BY tp.points+tpct.total_points_change DESC, tp.name ASC) AS SIGNED) AS rank_diff
+FROM TeamPoints AS tp
+INNER JOIN totalpointchangetable AS tpct
+USING (team_id);
+
+
+# Problem 2175
+DROP TABLE IF EXISTS Student;
+Create table If Not Exists Student (student_id int,student_name varchar(45), gender varchar(6), dept_id int);
+insert into Student (student_id, student_name, gender, dept_id) values ('1', 'Jack', 'M', '1');
+insert into Student (student_id, student_name, gender, dept_id) values ('2', 'Jane', 'F', '1');
+insert into Student (student_id, student_name, gender, dept_id) values ('3', 'Mark', 'M', '2');
+
+DROP TABLE IF EXISTS Department;
+Create table If Not Exists Department (dept_id int, dept_name varchar(255));
+insert into Department (dept_id, dept_name) values ('1', 'Engineering');
+insert into Department (dept_id, dept_name) values ('2', 'Science');
+insert into Department (dept_id, dept_name) values ('3', 'Law');
+
+SELECT * FROM (
+	SELECT d.dept_name,
+		IFNULL(COUNT(student_id), 0) AS student_number
+	FROM Department AS d
+	LEFT JOIN Student AS s
+	USING (dept_id)
+	GROUP BY d.dept_name
+) AS r
+ORDER BY r.student_number DESC, r.dept_name ASC;
+
+
+SELECT * FROM (
+	SELECT dept_name,
+		SUM(
+			CASE 
+				WHEN student_id THEN 1
+				ElSE 0
+			END
+		) AS student_number
+	FROM Department
+	LEFT JOIN Student AS s
+	USING (dept_id)
+	GROUP BY dept_name
+) AS r
+ORDER BY r.student_number DESC, r.dept_name ASC;
+
+
+# Problem 1468
+DROP TABLE IF EXISTS Salaries;
+Create table If Not Exists Salaries (company_id int, employee_id int, employee_name varchar(13), salary int);
+insert into Salaries (company_id, employee_id, employee_name, salary) values ('1', '1', 'Tony', '2000');
+insert into Salaries (company_id, employee_id, employee_name, salary) values ('1', '2', 'Pronub', '21300');
+insert into Salaries (company_id, employee_id, employee_name, salary) values ('1', '3', 'Tyrrox', '10800');
+insert into Salaries (company_id, employee_id, employee_name, salary) values ('2', '1', 'Pam', '300');
+insert into Salaries (company_id, employee_id, employee_name, salary) values ('2', '7', 'Bassem', '450');
+insert into Salaries (company_id, employee_id, employee_name, salary) values ('2', '9', 'Hermione', '700');
+insert into Salaries (company_id, employee_id, employee_name, salary) values ('3', '7', 'Bocaben', '100');
+insert into Salaries (company_id, employee_id, employee_name, salary) values ('3', '2', 'Ognjen', '2200');
+insert into Salaries (company_id, employee_id, employee_name, salary) values ('3', '13', 'Nyancat', '3300');
+insert into Salaries (company_id, employee_id, employee_name, salary) values ('3', '15', 'Morninngcat', '7777');
+
+WITH taxtable AS (
+	SELECT company_id,
+	CASE 
+		WHEN MAX(salary)<1000 THEN 1
+        WHEN MAX(salary)>=1000 AND MAX(salary)<=10000 THEN 0.76
+        WHEN MAX(salary)>10000 THEN 0.51
+    END AS tax
+	FROM Salaries
+	GROUP BY company_id
+) 
+SELECT s.company_id, s.employee_id, s.employee_name,
+	ROUND(s.salary*t.tax, 0) AS salary
+FROM Salaries AS s
+INNER JOIN taxtable As t
+USING (company_id);

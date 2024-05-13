@@ -1524,4 +1524,124 @@ WHERE DATEDIFF(r.steps_date, r.two_rows_before) = 2
 ORDER BY r.user_id, r.steps_date;
 
 
+Problem: 2159. Order Two Columns Independently
+
+Intuition:
+As we have to order two columns independently, we cannot use ORDER BY directly.
+Instead, we have to create ROW_NUMBER to use as the index for rearranging. Such
+implementation is often seen in SAS
+
+Solution:
+SELECT d1.first_col, d2.second_col FROM (
+	SELECT first_col, ROW_NUMBER() OVER (ORDER BY first_col ASC) AS rnum1 FROM Data
+) AS d1
+INNER JOIN (
+	SELECT second_col, ROW_NUMBER() OVER (ORDER BY second_col DESC) AS rnum2 FROM Data
+) AS d2
+ON d1.rnum1=d2.rnum2;
+
+
+Problem: 2175. The Change in Global Ranking
+
+Intuition:
+What we have to do is to compare the ranking between old points and updated points.
+So we have to create column for old rank and for new rank
+
+Approach:
+Firstly, we create the old rank column
+
+	SELECT tp.team_id, tp.name,
+		ROW_NUMBER() OVER (ORDER BY tp.points DESC, tp.name ASC) AS old_rank
+	FROM TeamPoints AS tp
+	LEFT JOIN PointsChange AS pc
+	USING (team_id);
+	
+Using the same method, we can create new rank column
+
+	SELECT tp.team_id, tp.name,
+		ROW_NUMBER() OVER (ORDER BY tp.points+pc.points_change DESC, tp.name ASC) AS new_rank
+	FROM TeamPoints AS tp
+	LEFT JOIN PointsChange AS pc
+	USING (team_id);
+	
+Then we can subtract these two results to get the difference between old and new rank. Note that
+because the type of number we get using ROW_NUMBER is UNSIGNED, which would raise the error if 
+we directly subtract it from another. Hence, we have to covert the type to SIGNED
+
+	CAST(new_rank AS SIGNED)
+	
+Solution:
+SELECT tp.team_id, tp.name,
+	CAST(ROW_NUMBER() OVER (ORDER BY tp.points DESC, tp.name ASC) AS SIGNED) - 
+    CAST(ROW_NUMBER() OVER (ORDER BY tp.points+pc.points_change DESC, tp.name ASC) AS SIGNED) AS rank_diff
+FROM TeamPoints AS tp
+LEFT JOIN PointsChange AS pc
+USING (team_id);
+
+
+Problem: 580. Count Student Number in Departments
+
+Intuition:
+The problem asks us to count the student number for each department. It might be straightforward.
+However, the gotcha would be that for department without any students, it must return 0.
+
+Approach:
+Because we have to deal with department without any students, we have to use LEFT JOIN
+
+	SELECT *
+	FROM Department AS d
+	LEFT JOIN Student AS s
+	USING (dept_id)
+
+Next, we can make use of GROUP BY to count the number of student in each department
+
+	SELECT d.dept_name,
+		COUNT(student_id) AS student_number
+	FROM Department AS d
+	LEFT JOIN Student AS s
+	USING (dept_id)
+	GROUP BY d.dept_name
+	
+However, since we have to deal with department without any students, lets' modify the 
+counting statement
+
+	IFNULL(COUNT(student_id), 0) AS student_number
+	
+Then we can change the order to meet the output requirements
+
+Solution:
+SELECT * FROM (
+	SELECT d.dept_name,
+		IFNULL(COUNT(student_id), 0) AS student_number
+	FROM Department AS d
+	LEFT JOIN Student AS s
+	USING (dept_id)
+	GROUP BY d.dept_name
+) AS r
+ORDER BY r.student_number DESC, r.dept_name ASC;
+
+
+Problem: 1468. Calculate Salaries
+
+Intuition:
+Trivial
+
+Solution:
+WITH taxtable AS (
+	SELECT company_id,
+	CASE 
+		WHEN MAX(salary)<1000 THEN 1
+        WHEN MAX(salary)>=1000 AND MAX(salary)<=10000 THEN 0.76
+        WHEN MAX(salary)>10000 THEN 0.51
+    END AS tax
+	FROM Salaries
+	GROUP BY company_id
+) 
+SELECT s.company_id, s.employee_id, s.employee_name,
+	ROUND(s.salary*t.tax, 0) AS salary
+FROM Salaries AS s
+INNER JOIN taxtable As t
+USING (company_id);
+
+
 	
