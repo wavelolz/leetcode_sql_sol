@@ -1644,4 +1644,158 @@ INNER JOIN taxtable As t
 USING (company_id);
 
 
+Problem: 2112. The Airport With the Most Traffic
+
+Intuition:
+The most important point in the problem is that we have to separate the calculation
+between arrival airport and departure airport. And to do this, we have to modify the
+table format with two column [airport_id, traffic].
+
+Approach:
+Firstly, we create a new table to further aid us in calculating the total traffic
+for each airport
+
+	SELECT departure_airport AS airport_id, flights_count FROM Flights
+		UNION ALL 
+	SELECT arrival_airport AS airport_id, flights_count FROM Flights
+	
+Now we can calculate the rank of total traffic for each airport
+
+	SELECT airport_id,
+		RANK() OVER (ORDER BY SUM(flights_count) DESC) AS rnk
+	FROM traffictable
+	GROUP BY airport_id
+	
+Eventuall, we just have to filter out those airport_id which has rnk=1
+
+Solution:
+WITH traffictable AS (
+	SELECT departure_airport AS airport_id, flights_count FROM Flights
+	UNION ALL 
+	SELECT arrival_airport AS airport_id, flights_count FROM Flights
+)
+SELECT r.airport_id FROM (
+	SELECT airport_id,
+		RANK() OVER (ORDER BY SUM(flights_count) DESC) AS rnk
+	FROM traffictable
+	GROUP BY airport_id
+) AS r
+WHERE r.rnk=1;
+
+
+Problem: 1867. Orders With Maximum Quantity Above Average
+
+Intuition:
+There are two values we need to acquire in this problem. 1. average quantity
+of each order and 2. maximum quantity of each order. Then we have to find
+out the order_id whose maximum quantity is greater than the maximum average
+quantity
+
+Approach:
+Firstly, we have to compute the average quantity of each order
+
+	SELECT
+		SUM(quantity)/COUNT(product_id) AS average_quantity
+	FROM OrdersDetails
+	GROUP BY order_id
+	
+Next, we can use subquery to filter out the maximum value
+
+	SELECT MAX(r.average_quantity) AS max_average_quantity FROM (SUBQUERY) AS r
+	
+Then we will compare the maximum quantity of each order with the value and we can
+get the result
+
+Solution:
+SELECT order_id
+FROM OrdersDetails
+GROUP BY order_id
+HAVING MAX(quantity) > (
+	SELECT MAX(r.average_quantity) AS max_average_quantity FROM (
+		SELECT
+			SUM(quantity)/COUNT(product_id) AS average_quantity
+		FROM OrdersDetails
+		GROUP BY order_id
+	) AS r
+);
+
+
+Problem: 3103. Find Trending Hashtags II
+
+Intuition:
+This is a difficult problem where we have to separate the string based on delimiter
+
+Approach:
+The main idea is as follow: for each tweet, we have to iteratively find the substring
+that starts with delimiter "#". To achieve iteration task here, we have to make use
+of recursive CTE
+
+WITH RECURSIVE t1 AS (
+		SELECT 
+			SUBSTRING_INDEX(SUBSTRING_INDEX(tweet, "#", -1), " ", 1) AS tag,
+			SUBSTRING(tweet, 1, LENGTH(tweet)-LOCATE("#", REVERSE(tweet))) AS remain
+		FROM Tweets
+        WHERE YEAR(tweet_date)=2024 AND MONTH(tweet_date)=2
+        UNION ALL
+        SELECT 
+			SUBSTRING_INDEX(SUBSTRING_INDEX(remain, "#", -1), " ", 1) AS tag,
+            SUBSTRING(remain, 1, LENGTH(remain)-LOCATE("#", REVERSE(remain))) AS remain
+		FROM t1
+        WHERE LOCATE("#", remain)>0
+)
+
+Let's break down the query here. Firstly, the statement
+	
+	SUBSTRING_INDEX(tweet, "#", -1)
+	
+find the substring associate with "#". Since we use the argument -1, it searched the string
+backward. For example, given the string "I love to eat #hamburger in McDonalds", it returns
+"hamburger in McDonalds". Next
+	
+	SUBSTRING_INDEX(SUBSTRING_INDEX(tweet, "#", -1), " ", 1)
+
+extracts the substring before the first white-space. In the above example, it resurns "hamburger".
+Next, after find the first hashtag backward, we have to remove the part we've already searched
+
+	LOCATE("#", REVERSE(tweet))
+	
+This statement returns the position of first occurence of "#" counting from backward. So when we
+do 
+
+	LENGTH(remain)-LOCATE("#", REVERSE(remain))
+	
+It returns the last position where we want to remain the string. Then the following is the recursive
+part. Now that we have every occurance of the hashtag, we can simply order it using RANK
+
+Solution:
+WITH RECURSIVE t1 AS (
+		SELECT 
+			SUBSTRING_INDEX(SUBSTRING_INDEX(tweet, "#", -1), " ", 1) AS tag,
+			SUBSTRING(tweet, 1, LENGTH(tweet)-LOCATE("#", REVERSE(tweet))) AS remain
+		FROM Tweets
+        WHERE YEAR(tweet_date)=2024 AND MONTH(tweet_date)=2
+        UNION ALL
+        SELECT 
+			SUBSTRING_INDEX(SUBSTRING_INDEX(remain, "#", -1), " ", 1) AS tag,
+            SUBSTRING(remain, 1, LENGTH(remain)-LOCATE("#", REVERSE(remain))) AS remain
+		FROM t1
+        WHERE LOCATE("#", remain)>0
+)
+
+SELECT 
+	CONCAT("#", tag) AS hashtag,
+    count
+FROM (
+	SELECT tag,
+		RANK() OVER (ORDER BY COUNT(*) DESC) AS rnk,
+        COUNT(*) AS count
+	FROM t1
+	GROUP BY tag
+) AS r
+ORDER BY r.rnk ASC, r.tag DESC LIMIT 3;
+	
+	
+	
+
+
 	

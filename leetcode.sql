@@ -1291,3 +1291,93 @@ SELECT s.company_id, s.employee_id, s.employee_name,
 FROM Salaries AS s
 INNER JOIN taxtable As t
 USING (company_id);
+
+
+# Problem 2112
+DROP TABLE IF EXISTS Flights;
+Create table If Not Exists Flights (departure_airport int, arrival_airport int, flights_count int);
+insert into Flights (departure_airport, arrival_airport, flights_count) values ('1', '2', '4');
+insert into Flights (departure_airport, arrival_airport, flights_count) values ('2', '1', '5');
+insert into Flights (departure_airport, arrival_airport, flights_count) values ('2', '4', '5');
+
+WITH traffictable AS (
+	SELECT departure_airport AS airport_id, flights_count FROM Flights
+	UNION ALL 
+	SELECT arrival_airport AS airport_id, flights_count FROM Flights
+)
+SELECT r.airport_id FROM (
+	SELECT airport_id,
+		RANK() OVER (ORDER BY SUM(flights_count) DESC) AS rnk
+	FROM traffictable
+	GROUP BY airport_id
+) AS r
+WHERE r.rnk=1;
+
+
+# Problem 1867
+DROP TABLE IF EXISTS OrdersDetails;
+Create table If Not Exists OrdersDetails (order_id int, product_id int, quantity int);
+insert into OrdersDetails (order_id, product_id, quantity) values ('1', '1', '12');
+insert into OrdersDetails (order_id, product_id, quantity) values ('1', '2', '10');
+insert into OrdersDetails (order_id, produsct_id, quantity) values ('1', '3', '15');
+insert into OrdersDetails (order_id, product_id, quantity) values ('2', '1', '8');
+insert into OrdersDetails (order_id, product_id, quantity) values ('2', '4', '4');
+insert into OrdersDetails (order_id, product_id, quantity) values ('2', '5', '6');
+insert into OrdersDetails (order_id, product_id, quantity) values ('3', '3', '5');
+insert into OrdersDetails (order_id, product_id, quantity) values ('3', '4', '18');
+insert into OrdersDetails (order_id, product_id, quantity) values ('4', '5', '2');
+insert into OrdersDetails (order_id, product_id, quantity) values ('4', '6', '8');
+insert into OrdersDetails (order_id, product_id, quantity) values ('5', '7', '9');
+insert into OrdersDetails (order_id, product_id, quantity) values ('5', '8', '9');
+insert into OrdersDetails (order_id, product_id, quantity) values ('3', '9', '20');
+insert into OrdersDetails (order_id, product_id, quantity) values ('2', '9', '4');
+
+SELECT order_id
+FROM OrdersDetails
+GROUP BY order_id
+HAVING MAX(quantity) > (
+	SELECT MAX(r.average_quantity) AS max_average_quantity FROM (
+		SELECT
+			SUM(quantity)/COUNT(product_id) AS average_quantity
+		FROM OrdersDetails
+		GROUP BY order_id
+	) AS r
+);
+
+
+# Problem 3103
+DROP TABLE IF EXISTS Tweets;
+Create table If Not Exists Tweets (user_id int, tweet_id int, tweet varchar(100), tweet_date date);
+insert into Tweets (user_id, tweet_id, tweet, tweet_date) values ('135', '13', 'Enjoying a great start to the day. #HappyDay #MorningVibes', '2024-02-01');
+insert into Tweets (user_id, tweet_id, tweet, tweet_date) values ('136', '14', 'Another #HappyDay with good vibes! #FeelGood', '2024-02-03');
+insert into Tweets (user_id, tweet_id, tweet, tweet_date) values ('137', '15', 'Productivity peaks! #WorkLife #ProductiveDay', '2024-02-04');
+insert into Tweets (user_id, tweet_id, tweet, tweet_date) values ('138', '16', 'Exploring new tech frontiers. #TechLife #Innovation', '2024-02-04');
+insert into Tweets (user_id, tweet_id, tweet, tweet_date) values ('139', '17', 'Gratitude for today moments. #HappyDay #Thankful', '2024-02-05');
+insert into Tweets (user_id, tweet_id, tweet, tweet_date) values ('140', '18', 'Innovation drives us. #TechLife #FutureTech', '2024-02-07');
+insert into Tweets (user_id, tweet_id, tweet, tweet_date) values ('141', '19', 'Connecting with nature serenity. #Nature #Peaceful', '2024-02-09');
+
+WITH RECURSIVE t1 AS (
+		SELECT 
+			SUBSTRING_INDEX(SUBSTRING_INDEX(tweet, "#", -1), " ", 1) AS tag,
+			SUBSTRING(tweet, 1, LENGTH(tweet)-LOCATE("#", REVERSE(tweet))) AS remain
+		FROM Tweets
+        WHERE YEAR(tweet_date)=2024 AND MONTH(tweet_date)=2
+        UNION ALL
+        SELECT 
+			SUBSTRING_INDEX(SUBSTRING_INDEX(remain, "#", -1), " ", 1) AS tag,
+            SUBSTRING(remain, 1, LENGTH(remain)-LOCATE("#", REVERSE(remain))) AS remain
+		FROM t1
+        WHERE LOCATE("#", remain)>0
+)
+
+SELECT 
+	CONCAT("#", tag) AS hashtag,
+    count
+FROM (
+	SELECT tag,
+		RANK() OVER (ORDER BY COUNT(*) DESC) AS rnk,
+        COUNT(*) AS count
+	FROM t1
+	GROUP BY tag
+) AS r
+ORDER BY r.rnk ASC, r.tag DESC LIMIT 3;
