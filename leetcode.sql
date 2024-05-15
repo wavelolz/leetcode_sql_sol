@@ -1381,3 +1381,161 @@ FROM (
 	GROUP BY tag
 ) AS r
 ORDER BY r.rnk ASC, r.tag DESC LIMIT 3;
+
+
+# Problem 1988
+DROP TABLE IF EXISTS Schools;
+Create table If Not Exists Schools (school_id int, capacity int);
+insert into Schools (school_id, capacity) values ('11', '151');
+insert into Schools (school_id, capacity) values ('5', '48');
+insert into Schools (school_id, capacity) values ('9', '9');
+insert into Schools (school_id, capacity) values ('10', '99');
+
+DROP TABLE IF EXISTS Exam;
+Create table If Not Exists Exam (score int, student_count int);
+insert into Exam (score, student_count) values ('975', '10');
+insert into Exam (score, student_count) values ('966', '60');
+insert into Exam (score, student_count) values ('844', '76');
+insert into Exam (score, student_count) values ('749', '76');
+insert into Exam (score, student_count) values ('744', '100');
+
+SELECT s.school_id,
+	IFNULL(MIN(e.score), -1) AS score
+FROM Schools s
+LEFT JOIN Exam e
+ON s.capacity>=e.student_count
+GROUP BY school_id;
+
+
+# Problem 1651
+DROP TABLE IF EXISTS Drivers;
+Create table If Not Exists Drivers (driver_id int, join_date date);
+insert into Drivers (driver_id, join_date) values ('10', '2019-12-10');
+insert into Drivers (driver_id, join_date) values ('8', '2020-1-13');
+insert into Drivers (driver_id, join_date) values ('5', '2020-2-16');
+insert into Drivers (driver_id, join_date) values ('7', '2020-3-8');
+insert into Drivers (driver_id, join_date) values ('4', '2020-5-17');
+insert into Drivers (driver_id, join_date) values ('1', '2020-10-24');
+insert into Drivers (driver_id, join_date) values ('6', '2021-1-5');
+
+DROP TABLE IF EXISTS Rides;
+Create table If Not Exists Rides (ride_id int, user_id int, requested_at date);
+insert into Rides (ride_id, user_id, requested_at) values ('6', '75', '2019-12-9');
+insert into Rides (ride_id, user_id, requested_at) values ('1', '54', '2020-2-9');
+insert into Rides (ride_id, user_id, requested_at) values ('10', '63', '2020-3-4');
+insert into Rides (ride_id, user_id, requested_at) values ('19', '39', '2020-4-6');
+insert into Rides (ride_id, user_id, requested_at) values ('3', '41', '2020-6-3');
+insert into Rides (ride_id, user_id, requested_at) values ('13', '52', '2020-6-22');
+insert into Rides (ride_id, user_id, requested_at) values ('7', '69', '2020-7-16');
+insert into Rides (ride_id, user_id, requested_at) values ('17', '70', '2020-8-25');
+insert into Rides (ride_id, user_id, requested_at) values ('20', '81', '2020-11-2');
+insert into Rides (ride_id, user_id, requested_at) values ('5', '57', '2020-11-9');
+insert into Rides (ride_id, user_id, requested_at) values ('2', '42', '2020-12-9');
+insert into Rides (ride_id, user_id, requested_at) values ('11', '68', '2021-1-11');
+insert into Rides (ride_id, user_id, requested_at) values ('15', '32', '2021-1-17');
+insert into Rides (ride_id, user_id, requested_at) values ('12', '11', '2021-1-19');
+insert into Rides (ride_id, user_id, requested_at) values ('14', '18', '2021-1-27');
+
+DROP TABLE IF EXISTS AcceptedRides;
+Create table If Not Exists AcceptedRides (ride_id int, driver_id int, ride_distance int, ride_duration int);
+insert into AcceptedRides (ride_id, driver_id, ride_distance, ride_duration) values ('10', '10', '63', '38');
+insert into AcceptedRides (ride_id, driver_id, ride_distance, ride_duration) values ('13', '10', '73', '96');
+insert into AcceptedRides (ride_id, driver_id, ride_distance, ride_duration) values ('7', '8', '100', '28');
+insert into AcceptedRides (ride_id, driver_id, ride_distance, ride_duration) values ('17', '7', '119', '68');
+insert into AcceptedRides (ride_id, driver_id, ride_distance, ride_duration) values ('20', '1', '121', '92');
+insert into AcceptedRides (ride_id, driver_id, ride_distance, ride_duration) values ('5', '7', '42', '101');
+insert into AcceptedRides (ride_id, driver_id, ride_distance, ride_duration) values ('2', '4', '6', '38');
+insert into AcceptedRides (ride_id, driver_id, ride_distance, ride_duration) values ('11', '8', '37', '43');
+insert into AcceptedRides (ride_id, driver_id, ride_distance, ride_duration) values ('15', '8', '108', '82');
+insert into AcceptedRides (ride_id, driver_id, ride_distance, ride_duration) values ('12', '8', '38', '34');
+insert into AcceptedRides (ride_id, driver_id, ride_distance, ride_duration) values ('14', '1', '90', '74');
+
+WITH RECURSIVE t1 AS (
+	SELECT 
+		1 AS sm,
+        3 AS em
+	UNION ALL
+	SELECT
+		sm+1 AS sm,
+        em+1 AS em
+	FROM t1
+    WHERE em<12
+)
+SELECT sm AS month,
+	ROUND(IFNULL(SUM(ride_distance), 0) / 3, 2) AS average_ride_distance,
+    ROUND(IFNULL(SUM(ride_duration), 0) / 3, 2) AS average_ride_duration
+FROM (
+	SELECT * FROM Rides r
+	INNER JOIN AcceptedRides ar
+	USING (ride_id)
+	WHERE YEAR(r.requested_at)=2020
+) AS r
+RIGHT JOIN t1
+ON t1.sm <= MONTH(r.requested_at) AND MONTH(r.requested_at) <= t1.em
+GROUP BY t1.sm, t1.em
+ORDER BY t1.sm ASC;
+
+
+# Problem 2893
+DROP TABLE IF EXISTS Orders;
+Create table if not exists Orders(minute int, order_count int);
+insert into Orders (minute, order_count) values ('1', '0');
+insert into Orders (minute, order_count) values ('2', '2');
+insert into Orders (minute, order_count) values ('3', '4');
+insert into Orders (minute, order_count) values ('4', '6');
+insert into Orders (minute, order_count) values ('5', '1');
+insert into Orders (minute, order_count) values ('6', '4');
+insert into Orders (minute, order_count) values ('7', '1');
+insert into Orders (minute, order_count) values ('8', '2');
+insert into Orders (minute, order_count) values ('9', '4');
+insert into Orders (minute, order_count) values ('10', '1');
+insert into Orders (minute, order_count) values ('11', '4');
+insert into Orders (minute, order_count) values ('12', '6');
+
+WITH RECURSIVE t1 AS (
+	SELECT 0 AS inx
+    UNION ALL
+    SELECT inx+1 AS inx
+    FROM t1
+    WHERE inx<(SELECT MAX(minute)/6 FROM Orders)
+)
+SELECT t.inx+1 AS interval_no,
+	SUM(order_count) AS total_orders
+FROM t1 t
+INNER JOIN Orders o
+ON FLOOR((minute-1) / 6) = t.inx
+GROUP BY t.inx
+ORDER BY t.inx ASC;
+
+SELECT r.interval_no, SUM(r.order_count) AS total_orders FROM (
+	SELECT *,
+		IF(minute % 6 != 0, minute DIV 6 + 1, minute DIV 6) AS interval_no
+	FROM Orders
+) AS r
+GROUP BY r.interval_no
+ORDER BY r.interval_no ASC;
+
+
+# Problem 1126
+DROP TABLE IF EXISTS Events;
+Create table If Not Exists Events (business_id int, event_type varchar(10), occurrences int);
+insert into Events (business_id, event_type, occurrences) values ('1', 'reviews', '7');
+insert into Events (business_id, event_type, occurrences) values ('3', 'reviews', '3');
+insert into Events (business_id, event_type, occurrences) values ('1', 'ads', '11');
+insert into Events (business_id, event_type, occurrences) values ('2', 'ads', '7');
+insert into Events (business_id, event_type, occurrences) values ('3', 'ads', '6');
+insert into Events (business_id, event_type, occurrences) values ('1', 'page views', '3');
+insert into Events (business_id, event_type, occurrences) values ('2', 'page views', '12');
+
+SELECT e.business_id FROM Events e
+INNER JOIN (
+	SELECT event_type, AVG(occurrences) AS avg_occ FROM Events
+	GROUP BY event_type
+) r
+USING (event_type)
+WHERE e.occurrences>r.avg_occ
+GROUP BY business_id
+HAVING COUNT(*)>1;
+
+
+

@@ -1793,8 +1793,184 @@ FROM (
 	GROUP BY tag
 ) AS r
 ORDER BY r.rnk ASC, r.tag DESC LIMIT 3;
+
+
+Problem: 1988. Find Cutoff Score for Each School
+
+Intuition:
+As there are no foreign and primary keys in these two tables, we can perform conditional
+join operation here. With the join operation, we can find out all the viable score for 
+each school
+
+Approach:
+With the following query
+
+	SELECT *
+	FROM Schools s
+	LEFT JOIN Exam e
+	ON s.capacity>=e.student_count
 	
+we can find all the viable score requirements for each school. Note that we have to use
+OUTER JOIN instead of INNER JOIN because we need to show the school even if it doesn't 
+have any viable score selection. Next, we acquire the minimum score requirement using
+
+	MIN(e.score)
 	
+And because the school that doesn't have any viable selection should be set to -1, we 
+use
+
+	IFNULL(MIN(e.score), -1)
+	
+Solution:
+SELECT s.school_id,
+	IFNULL(MIN(e.score), -1) AS score
+FROM Schools s
+LEFT JOIN Exam e
+ON s.capacity>=e.student_count
+GROUP BY school_id;
+
+
+Problem: 1651. Hopper Company Queries III
+
+Intuition:
+Since we have to calculate the average for every 3 month, we need to control the WHERE condition
+to fit what we want. So we will first create a table to achieve this. That is, we want a
+table that represents each pair of month. Then we can perform join operation to achieve the 
+task
+
+Approach:
+Firstly, we use recursive CTE to create pairs (1,3), (2,4)...(10,12) to help us determine
+the range of each window
+
+	WITH RECURSIVE t1 AS (
+	SELECT 
+		1 AS sm,
+        3 AS em
+	UNION ALL
+	SELECT
+		sm+1 AS sm,
+        em+1 AS em
+	FROM t1
+    WHERE em<12
+	)
+	
+Now that we can combine this table with the original table with special condition key
+
+	SELECT * FROM (
+		SELECT * FROM Rides r
+		INNER JOIN AcceptedRides ar
+		USING (ride_id)
+		WHERE YEAR(r.requested_at)=2020
+	) AS r
+	RIGHT JOIN t1
+	ON t1.sm <= MONTH(r.requested_at) AND MONTH(r.requested_at) <= t1.em
+	
+This join operation helps us match the accepted rides records for each window. Based on
+the result, we can then calculate the average value with the following
+
+	ROUND(IFNULL(SUM(ride_distance), 0) / 3, 2) AS average_ride_distance,
+    ROUND(IFNULL(SUM(ride_duration), 0) / 3, 2) AS average_ride_duration
+	
+Solution:
+WITH RECURSIVE t1 AS (
+	SELECT 
+		1 AS sm,
+        3 AS em
+	UNION ALL
+	SELECT
+		sm+1 AS sm,
+        em+1 AS em
+	FROM t1
+    WHERE em<12
+)
+SELECT sm AS month,
+	ROUND(IFNULL(SUM(ride_distance), 0) / 3, 2) AS average_ride_distance,
+    ROUND(IFNULL(SUM(ride_duration), 0) / 3, 2) AS average_ride_duration
+FROM (
+	SELECT * FROM Rides r
+	INNER JOIN AcceptedRides ar
+	USING (ride_id)
+	WHERE YEAR(r.requested_at)=2020
+) AS r
+RIGHT JOIN t1
+ON t1.sm <= MONTH(r.requested_at) AND MONTH(r.requested_at) <= t1.em
+GROUP BY t1.sm, t1.em
+ORDER BY t1.sm ASC;
+
+
+Problem: 2893. Calculate Orders Within Each Interval
+
+Intuition:
+Since we have to divide the records for a 6-minute window, we can first create
+a index that helps us join the two tables. Because the length of the table is
+uncertain, we can make use of recursive CTE
+
+Approach:
+Firstly, we can use recursive CTE to generate how many interval we want
+
+	WITH RECURSIVE t1 AS (
+		SELECT 0 AS inx
+		UNION ALL
+		SELECT inx+1 AS inx
+		FROM t1
+		WHERE inx<(SELECT MAX(minute)/6 FROM Orders)
+	)
+	
+Next, we will minus all the minutes by 1, in that way, we can match the record
+with the index we've just created. [0, 1, 2, 3, 4, 5] -> 1, [6, 7, 8, 9, 10, 11]
+-> 2 etc.
+
+	SELECT *
+	FROM t1 t
+	INNER JOIN Orders o
+	ON FLOOR((minute-1) / 6) = t.inx;
+	
+Then we can acquire the desired result by using SUM
+
+Solution:
+WITH RECURSIVE t1 AS (
+	SELECT 0 AS inx
+    UNION ALL
+    SELECT inx+1 AS inx
+    FROM t1
+    WHERE inx<(SELECT MAX(minute)/6 FROM Orders)
+)
+SELECT t.inx+1 AS interval_no,
+	SUM(order_count) AS total_orders
+FROM t1 t
+INNER JOIN Orders o
+ON FLOOR((minute-1) / 6) = t.inx
+GROUP BY t.inx
+ORDER BY t.inx ASC;
+
+Modified Solution:
+SELECT r.interval_no, SUM(r.order_count) AS total_orders FROM (
+	SELECT *,
+		IF(minute % 6 != 0, minute DIV 6 + 1, minute DIV 6) AS interval_no
+	FROM Orders
+) AS r
+GROUP BY r.interval_no
+ORDER BY r.interval_no ASC;
+
+Modified Solution Explained:
+This solution makes use of IF and DIV statement to make the query more clear
+
+
+Problem: 1126
+
+Intuition:
+Trivial
+
+Solution:
+SELECT e.business_id FROM Events e
+INNER JOIN (
+	SELECT event_type, AVG(occurrences) AS avg_occ FROM Events
+	GROUP BY event_type
+) r
+USING (event_type)
+WHERE e.occurrences>r.avg_occ
+GROUP BY business_id
+HAVING COUNT(*)>1;
 	
 
 
