@@ -1971,6 +1971,163 @@ USING (event_type)
 WHERE e.occurrences>r.avg_occ
 GROUP BY business_id
 HAVING COUNT(*)>1;
+
+
+Problem: 2324. Product Sales Analysis IV
+
+Intuition:
+My very first idea is to combine two table using product_id and use quantity*price
+to calculate the total cost. However, I soon find out that in the Sales table, it might
+contain records of same pair of product_id and user_id but with different quantity.
+So we have to make use of GROUP BY to deal with this scenerios
+
+Approach:
+Firstly, we join the two table and find out the total cost for each user_id spent on 
+each product
+
+	SELECT s.user_id, p.product_id,
+		SUM(s.quantity*p.price) AS total_cost
+	FROM Sales s
+	INNER JOIN Product p
+	ON s.product_id=p.product_id
+	GROUP BY s.user_id, p.product_id
+	
+Next, because the problem asks us to find out the product that each user spend the MOST
+on it, we have to order the cost. So we have
+
+	RANK() OVER (PARTITION BY s.user_id ORDER BY SUM(s.quantity*p.price) DESC)
+	
+Note that the rank would be reset for each user. Then, we can use subquery to find out 
+the records with rnk=1
+
+
+Solution:
+SELECT r.user_id, r.product_id FROM (
+	SELECT s.user_id, p.product_id,
+		RANK() OVER (PARTITION BY s.user_id ORDER BY SUM(s.quantity*p.price) DESC) AS rnk
+	FROM Sales s
+	INNER JOIN Product p
+	ON s.product_id=p.product_id
+	GROUP BY s.user_id, p.product_id
+) AS r
+WHERE r.rnk=1;
+
+
+Problem: 1709. Biggest Window Between Visits
+
+Approach:
+This problem requires the usage of LEAD, which returns the future row otherwise it will give
+a default value. First, let's set the next visit for each records for each user
+
+	SELECT *,
+		LEAD(visit_date, 1, '2021-1-1') OVER (PARTITION BY user_id ORDER BY visit_date ASC) AS window_len
+	FROM UserVisits
+	
+Now we can calculate the date difference between each visit date using 
+
+	DATEDIFF(LEAD(visit_date, 1, '2021-1-1') OVER (PARTITION BY user_id ORDER BY visit_date ASC), visit_date) AS window_len
+	
+The last step would be extracting the maximum value for each user
+
+Solution:
+SELECT r.user_id, MAX(r.window_len) AS biggest_window FROM (
+	SELECT *,
+		DATEDIFF(LEAD(visit_date, 1, '2021-1-1') OVER (PARTITION BY user_id ORDER BY visit_date ASC), visit_date) AS window_len
+	FROM UserVisits
+) AS r
+GROUP BY r.user_id
+
+
+Problem: 3050. Pizza Toppings Cost Analysis
+
+Approach:
+This problem asks us to find the distinct combination of the pizza toppings, and give it 
+with alphabetical order. We can perform the following join operation to acquire the result
+
+	SELECT *
+	FROM Toppings AS t1, Toppings AS t2, Toppings AS t3
+	WHERE t1.topping_name<t2.topping_name AND t2.topping_name<t3.topping_name
+
+The rest of the solution is straightforward
+
+Solution:
+SELECT * FROM (
+	SELECT
+		CONCAT(t1.topping_name, ",", t2.topping_name, ",", t3.topping_name) AS pizza,
+		SUM(t1.cost+t2.cost+t3.cost) AS total_cost 
+	FROM Toppings AS t1, Toppings AS t2, Toppings AS t3
+	WHERE t1.topping_name<t2.topping_name AND t2.topping_name<t3.topping_name
+	GROUP BY t1.topping_name, t2.topping_name, t3.topping_name
+) r
+ORDER BY r.total_cost DESC, r.pizza ASC;
+
+
+Problem: 2686. Immediate Food Delivery III
+
+Intuition:
+The main idea of this problem is to calculate how many pairs of order_date<customer_prefer_date.
+So once we give a bool to this comparison, the rest is straightforward
+
+Solution:
+SELECT r.order_date,
+	ROUND(SUM(r.inx)/COUNT(*)*100, 2) AS immediate_percentage
+FROM (
+	SELECT *,
+		CASE
+			WHEN order_date=customer_pref_delivery_date THEN 1
+			ELSE 0
+		END AS inx
+	FROM Delivery
+) r
+GROUP BY r.order_date
+ORDER BY r.order_date ASC;
+
+
+Problem: 2362. Generate the Invoice
+
+Intuition:
+This problem is not difficult, but it's a little bit complicated that requires us to break each
+step apart
+
+Approach:
+Firstly, we have to find out the invoice with the highest price, and to do that, we have to 
+join two tables first
+
+	SELECT *
+	FROM Products pr
+	INNER JOIN Purchases pu
+	USING (product_id)
+	
+Next, we want to calculate the total price for each invoice, which is
+
+	SUM(price*quantity)
+	
+And then we have to give rank based on the price of invoice. Also, we have to order with ascending
+invoice id incase there is a tie
+
+	RANK() OVER (ORDER BY SUM(price*quantity) DESC, invoice_id ASC) AS rnk
+	
+Alright, now that we have the invoice_id we need, we just have to filter out the information of 
+this invoice and do the rest calculation
+
+Solution:
+WITH rnktable AS (
+	SELECT invoice_id,
+		RANK() OVER (ORDER BY SUM(price*quantity) DESC, invoice_id ASC) AS rnk
+	FROM Products pr
+	INNER JOIN Purchases pu
+	USING (product_id)
+	GROUP BY invoice_id
+)
+
+SELECT product_id, quantity,
+	price*quantity AS price
+FROM Products pr
+INNER JOIN Purchases pu
+USING (product_id)
+WHERE invoice_id=(SELECT invoice_id FROM rnktable WHERE rnk=1);W
+
+	
 	
 
 

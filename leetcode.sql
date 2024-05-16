@@ -1538,4 +1538,125 @@ GROUP BY business_id
 HAVING COUNT(*)>1;
 
 
+# Problem 2324
+DROP TABLE IF EXISTS Sales;
+Create table If Not Exists Sales (sale_id int, product_id int, user_id int, quantity int);
+insert into Sales (sale_id, product_id, user_id, quantity) values ('1', '1', '101', '10');
+insert into Sales (sale_id, product_id, user_id, quantity) values ('2', '3', '101', '7');
+insert into Sales (sale_id, product_id, user_id, quantity) values ('3', '1', '102', '9');
+insert into Sales (sale_id, product_id, user_id, quantity) values ('4', '2', '102', '6');
+insert into Sales (sale_id, product_id, user_id, quantity) values ('5', '3', '102', '10');
+insert into Sales (sale_id, product_id, user_id, quantity) values ('6', '1', '102', '6');
+
+DROP TABLE IF EXISTS Product;
+Create table If Not Exists Product (product_id int, price int);
+insert into Product (product_id, price) values ('1', '10');
+insert into Product (product_id, price) values ('2', '25');
+insert into Product (product_id, price) values ('3', '15');
+
+SELECT r.user_id, r.product_id FROM (
+	SELECT s.user_id, p.product_id,
+		RANK() OVER (PARTITION BY s.user_id ORDER BY SUM(s.quantity*p.price) DESC) AS rnk
+	FROM Sales s
+	INNER JOIN Product p
+	ON s.product_id=p.product_id
+	GROUP BY s.user_id, p.product_id
+) AS r
+WHERE r.rnk=1;
+
+
+# Problem 1709
+DROP TABLE IF EXISTS UserVisits;
+Create table If Not Exists UserVisits(user_id int, visit_date date);
+insert into UserVisits (user_id, visit_date) values ('1', '2020-11-28');
+insert into UserVisits (user_id, visit_date) values ('1', '2020-10-20');
+insert into UserVisits (user_id, visit_date) values ('1', '2020-12-3');
+insert into UserVisits (user_id, visit_date) values ('2', '2020-10-5');
+insert into UserVisits (user_id, visit_date) values ('2', '2020-12-9');
+insert into UserVisits (user_id, visit_date) values ('3', '2020-11-11');
+
+SELECT r.user_id, MAX(r.window_len) AS biggest_window FROM (
+	SELECT *,
+		DATEDIFF(LEAD(visit_date, 1, '2021-1-1') OVER (PARTITION BY user_id ORDER BY visit_date ASC), visit_date) AS window_len
+	FROM UserVisits
+) AS r
+GROUP BY r.user_id;
+
+
+# Problem 3050
+DROP TABLE IF EXISTS Toppings;
+Create table if not exists Toppings(topping_name varchar(100), cost decimal(5,2));
+insert into Toppings (topping_name, cost) values ('Pepperoni', '0.5');
+insert into Toppings (topping_name, cost) values ('Sausage', '0.7');
+insert into Toppings (topping_name, cost) values ('Chicken', '0.55');
+insert into Toppings (topping_name, cost) values ('Extra Cheese', '0.4');
+
+SELECT * FROM (
+	SELECT
+		CONCAT(t1.topping_name, ",", t2.topping_name, ",", t3.topping_name) AS pizza,
+		SUM(t1.cost+t2.cost+t3.cost) AS total_cost 
+	FROM Toppings AS t1, Toppings AS t2, Toppings AS t3
+	WHERE t1.topping_name<t2.topping_name AND t2.topping_name<t3.topping_name
+	GROUP BY t1.topping_name, t2.topping_name, t3.topping_name
+) r
+ORDER BY r.total_cost DESC, r.pizza ASC; 
+
+
+# Problem 2686
+DROP TABLE IF EXISTS Delivery;
+Create table If Not Exists Delivery (delivery_id int, customer_id int, order_date date, customer_pref_delivery_date date);
+insert into Delivery (delivery_id, customer_id, order_date, customer_pref_delivery_date) values ('1', '1', '2019-08-01', '2019-08-02');
+insert into Delivery (delivery_id, customer_id, order_date, customer_pref_delivery_date) values ('2', '2', '2019-08-01', '2019-08-01');
+insert into Delivery (delivery_id, customer_id, order_date, customer_pref_delivery_date) values ('3', '1', '2019-08-01', '2019-08-01');
+insert into Delivery (delivery_id, customer_id, order_date, customer_pref_delivery_date) values ('4', '3', '2019-08-02', '2019-08-13');
+insert into Delivery (delivery_id, customer_id, order_date, customer_pref_delivery_date) values ('5', '3', '2019-08-02', '2019-08-02');
+insert into Delivery (delivery_id, customer_id, order_date, customer_pref_delivery_date) values ('6', '2', '2019-08-02', '2019-08-02');
+insert into Delivery (delivery_id, customer_id, order_date, customer_pref_delivery_date) values ('7', '4', '2019-08-03', '2019-08-03');
+insert into Delivery (delivery_id, customer_id, order_date, customer_pref_delivery_date) values ('8', '1', '2019-08-03', '2019-08-03');
+insert into Delivery (delivery_id, customer_id, order_date, customer_pref_delivery_date) values ('9', '5', '2019-08-04', '2019-08-18');
+insert into Delivery (delivery_id, customer_id, order_date, customer_pref_delivery_date) values ('10', '2', '2019-08-04', '2019-08-18');
+
+SELECT r.order_date,
+	ROUND(SUM(r.inx)/COUNT(*)*100, 2) AS immediate_percentage
+FROM (
+	SELECT *,
+		CASE
+			WHEN order_date=customer_pref_delivery_date THEN 1
+			ELSE 0
+		END AS inx
+	FROM Delivery
+) r
+GROUP BY r.order_date
+ORDER BY r.order_date ASC;
+
+
+# Problem 2362
+DROP TABLE IF EXISTS Products;
+Create table If Not Exists Products (product_id int, price int);
+insert into Products (product_id, price) values ('1', '100');
+insert into Products (product_id, price) values ('2', '200');
+
+DROP TABLE IF EXISTS Purchases;
+Create table If Not Exists Purchases (invoice_id int, product_id int, quantity int);
+insert into Purchases (invoice_id, product_id, quantity) values ('1', '1', '2');
+insert into Purchases (invoice_id, product_id, quantity) values ('3', '2', '1');
+insert into Purchases (invoice_id, product_id, quantity) values ('2', '2', '3');
+insert into Purchases (invoice_id, product_id, quantity) values ('2', '1', '4');
+insert into Purchases (invoice_id, product_id, quantity) values ('4', '1', '10');
+
+WITH rnktable AS (
+	SELECT invoice_id,
+		RANK() OVER (ORDER BY SUM(price*quantity) DESC, invoice_id ASC) AS rnk
+	FROM Products pr
+	INNER JOIN Purchases pu
+	USING (product_id)
+	GROUP BY invoice_id
+)
+
+SELECT product_id, quantity,
+	price*quantity AS price
+FROM Products pr
+INNER JOIN Purchases pu
+USING (product_id)
+WHERE invoice_id=(SELECT invoice_id FROM rnktable WHERE rnk=1);
 
