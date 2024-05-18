@@ -1660,3 +1660,164 @@ INNER JOIN Purchases pu
 USING (product_id)
 WHERE invoice_id=(SELECT invoice_id FROM rnktable WHERE rnk=1);
 
+
+# Problem 574
+DROP TABLE IF EXISTS Candidate;
+Create table If Not Exists Candidate (id int, name varchar(255));
+insert into Candidate (id, name) values ('1', 'A');
+insert into Candidate (id, name) values ('2', 'B');
+insert into Candidate (id, name) values ('3', 'C');
+insert into Candidate (id, name) values ('4', 'D');
+insert into Candidate (id, name) values ('5', 'E');
+
+DROP TABLE IF EXISTS Vote;
+Create table If Not Exists Vote (id int, candidateId int);
+insert into Vote (id, candidateId) values ('1', '2');
+insert into Vote (id, candidateId) values ('2', '4');
+insert into Vote (id, candidateId) values ('3', '3');
+insert into Vote (id, candidateId) values ('4', '2');
+insert into Vote (id, candidateId) values ('5', '5');
+
+SELECT c.name FROM (
+	SELECT candidateId,
+		COUNT(*) AS cnt
+	FROM Vote
+	GROUP BY candidateId
+) AS r
+INNER JOIN Candidate c
+ON r.candidateId=c.id
+ORDER BY r.cnt DESC LIMIT 1;
+
+
+# Problem 3118
+DROP TABLE IF EXISTS Purchases;
+Create Table if Not Exists Purchases( user_id int, purchase_date date, amount_spend int);
+insert into Purchases (user_id, purchase_date, amount_spend) values ('11', '2023-11-03', '1126');
+insert into Purchases (user_id, purchase_date, amount_spend) values ('15', '2023-11-10', '7473');
+insert into Purchases (user_id, purchase_date, amount_spend) values ('17', '2023-11-17', '2414');
+insert into Purchases (user_id, purchase_date, amount_spend) values ('12', '2023-11-24', '9692');
+insert into Purchases (user_id, purchase_date, amount_spend) values ('8', '2023-11-24', '5117');
+insert into Purchases (user_id, purchase_date, amount_spend) values ('1', '2023-11-24', '5241');
+insert into Purchases (user_id, purchase_date, amount_spend) values ('10', '2023-11-22', '8266');
+insert into Purchases (user_id, purchase_date, amount_spend) values ('13', '2023-11-21', '12000');
+
+DROP TABLE IF EXISTS Users;
+Create Table if Not Exists Users (user_id int, membership enum('Standard', 'Premium', 'VIP'));
+insert into Users (user_id, membership) values ('11', 'Premium');
+insert into Users (user_id, membership) values ('15', 'VIP');
+insert into Users (user_id, membership) values ('17', 'Standard');
+insert into Users (user_id, membership) values ('12', 'VIP');
+insert into Users (user_id, membership) values ('8', 'Premium');
+insert into Users (user_id, membership) values ('1', 'VIP');
+insert into Users (user_id, membership) values ('10', 'Standard');
+insert into Users (user_id, membership) values ('13', 'Premium');
+
+WITH RECURSIVE predefinetable AS (
+	SELECT 1 AS week_of_month
+    UNION ALL
+    SELECT week_of_month+1 AS week_of_moth FROM predefinetable
+    WHERE week_of_month<4
+)
+
+SELECT inx_table.week_of_month, inx_table.membership,
+	IFNULL(amount_table.total_amount, 0) AS total_amount
+FROM (
+	SELECT * FROM predefinetable p
+	CROSS JOIN
+		( 
+		 SELECT "Premium" AS membership
+         UNION ALL
+		 SELECT "VIP" membership
+	) membership_table
+) inx_table
+LEFT JOIN (
+	SELECT wom_table.week_of_month, wom_table.membership,
+	 SUM(amount_spend) AS total_amount
+	FROM (
+		SELECT *,
+			WEEK(purchase_date, 5) - WEEK('2023-11-1') + 1 AS week_of_month
+		FROM Purchases
+		INNER JOIN Users
+		USING (user_id)
+		WHERE DAYOFWEEK(purchase_date)=6 AND membership != "Standard" AND YEAR(purchase_date)=2023 AND MONTH(purchase_date)=11
+	) wom_table
+	GROUP BY wom_table.week_of_month, wom_table.membership
+) amount_table
+ON inx_table.week_of_month=amount_table.week_of_month AND inx_table.membership=amount_table.membership
+ORDER BY inx_table.week_of_month, inx_table.membership ASC
+
+
+WITH RECURSIVE weeks AS (
+    SELECT 1 AS week_of_month
+    UNION ALL
+    SELECT week_of_month + 1 FROM weeks
+    WHERE week_of_month < 4
+),
+membership_types AS (
+    SELECT 'Premium' AS membership
+    UNION ALL
+    SELECT 'VIP' AS membership
+),
+all_combinations AS (
+    SELECT w.week_of_month, m.membership
+    FROM weeks w
+    CROSS JOIN membership_types m
+),
+purchase_summary AS (
+    SELECT 
+        WEEK(p.purchase_date, 5) - WEEK('2023-11-1') + 1 AS week_of_month,
+        u.membership,
+        SUM(p.amount_spend) AS total_amount
+    FROM Purchases p
+    INNER JOIN Users u ON p.user_id = u.user_id
+    WHERE 
+        DAYOFWEEK(p.purchase_date) = 6 
+        AND u.membership != 'Standard'
+        AND YEAR(p.purchase_date) = 2023 
+        AND MONTH(p.purchase_date) = 11
+    GROUP BY week_of_month, u.membership
+)
+SELECT 
+    a.week_of_month, 
+    a.membership,
+    IFNULL(ps.total_amount, 0) AS total_amount
+FROM 
+    all_combinations a
+LEFT JOIN 
+    purchase_summary ps
+ON 
+    a.week_of_month = ps.week_of_month 
+    AND a.membership = ps.membership
+ORDER BY 
+    a.week_of_month, 
+    a.membership ASC;
+    
+    
+# Problem 1934
+DROP TABLE IF EXISTS Signups;
+Create table If Not Exists Signups (user_id int, time_stamp datetime);
+insert into Signups (user_id, time_stamp) values ('3', '2020-03-21 10:16:13');
+insert into Signups (user_id, time_stamp) values ('7', '2020-01-04 13:57:59');
+insert into Signups (user_id, time_stamp) values ('2', '2020-07-29 23:09:44');
+insert into Signups (user_id, time_stamp) values ('6', '2020-12-09 10:39:37');
+
+DROP TABLE IF EXISTS Confirmations;
+Create table If Not Exists Confirmations (user_id int, time_stamp datetime, action ENUM('confirmed','timeout'));
+insert into Confirmations (user_id, time_stamp, action) values ('3', '2021-01-06 03:30:46', 'timeout');
+insert into Confirmations (user_id, time_stamp, action) values ('3', '2021-07-14 14:00:00', 'timeout');
+insert into Confirmations (user_id, time_stamp, action) values ('7', '2021-06-12 11:57:29', 'confirmed');
+insert into Confirmations (user_id, time_stamp, action) values ('7', '2021-06-13 12:58:28', 'confirmed');
+insert into Confirmations (user_id, time_stamp, action) values ('7', '2021-06-14 13:59:27', 'confirmed');
+insert into Confirmations (user_id, time_stamp, action) values ('2', '2021-01-22 00:00:00', 'confirmed');
+insert into Confirmations (user_id, time_stamp, action) values ('2', '2021-02-28 23:59:59', 'timeout');
+
+SELECT s.user_id,
+	ROUND(SUM(IFNULL(c.inx, 0)) / COUNT(s.user_id), 2) AS confirmation_rate
+FROM Signups s
+LEFT JOIN (
+	SELECT *,
+		IF (action="confirmed", 1, 0) AS inx
+    FROM Confirmations
+) c
+USING (user_id) 
+GROUP BY s.user_id;

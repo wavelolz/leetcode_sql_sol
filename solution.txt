@@ -2125,7 +2125,157 @@ SELECT product_id, quantity,
 FROM Products pr
 INNER JOIN Purchases pu
 USING (product_id)
-WHERE invoice_id=(SELECT invoice_id FROM rnktable WHERE rnk=1);W
+WHERE invoice_id=(SELECT invoice_id FROM rnktable WHERE rnk=1);
+
+
+Problem: 574. Winning Candidate
+
+Intuition:
+Trivial
+
+Solution:
+SELECT c.name FROM (
+	SELECT candidateId,
+		COUNT(*) AS cnt
+	FROM Vote
+	GROUP BY candidateId
+) AS r
+INNER JOIN Candidate c
+ON r.candidateId=c.id
+ORDER BY r.cnt DESC LIMIT 1;
+
+
+Problem: 3118. Friday Purchase III
+
+Intuition:
+I don't think it's a medium problem. It contains the use of Recursive CTE and multiple
+CTE that makes it complicated. In addition, it has to show 0 for the day that no purchases
+occur. Let's break down what we need
+
+	1. Create a table that contains week_of_month and membership to help us do further join
+	2. Calculate the week_of_month of the purchase_date
+	3. Filter the purchase records with multiple conditions
+	4. Calculate the total_amount based on week_of_month and membership
+	
+Approach:
+Firstly, let's create a table with week_of_month, since we alreadly know that there are
+only 4 weeks in November 2023, we'll set the condition to 4
+
+	WITH RECURSIVE weeks AS (
+		SELECT 1 AS week_of_month
+		UNION ALL
+		SELECT week_of_month + 1 FROM weeks
+		WHERE week_of_month < 4
+	)
+	
+Next, we use CTE to create the membership type that we want. 
+	
+	WITH membership_types AS (
+		SELECT 'Premium' AS membership
+		UNION ALL
+		SELECT 'VIP' AS membership
+	)
+	
+Then we can use CROSS JOIN to derive the table that we need
+
+	WITH all_combinations AS (
+		SELECT w.week_of_month, m.membership
+		FROM weeks w
+		CROSS JOIN membership_types m
+	)
+	
+Let's move on to deal with the purchases detail. For each purchase date, we have to calculate
+the week_of_day. Since there is no build-in function to do this, we will subtract week of first
+day in 2023/11 from week_of_year for a specifice date then add 1 to get our result
+
+	WEEK(p.purchase_date, 5) - WEEK('2023-11-1') + 1 AS week_of_month
+	
+Once we acquire all the information, the rests are just simply JOINING and GROUPING
+
+Solution:
+WITH RECURSIVE weeks AS (
+    SELECT 1 AS week_of_month
+    UNION ALL
+    SELECT week_of_month + 1 FROM weeks
+    WHERE week_of_month < 4
+),
+membership_types AS (
+    SELECT 'Premium' AS membership
+    UNION ALL
+    SELECT 'VIP' AS membership
+),
+all_combinations AS (
+    SELECT w.week_of_month, m.membership
+    FROM weeks w
+    CROSS JOIN membership_types m
+),
+purchase_summary AS (
+    SELECT 
+        WEEK(p.purchase_date, 5) - WEEK('2023-11-1') + 1 AS week_of_month,
+        u.membership,
+        SUM(p.amount_spend) AS total_amount
+    FROM Purchases p
+    INNER JOIN Users u ON p.user_id = u.user_id
+    WHERE 
+        DAYOFWEEK(p.purchase_date) = 6 
+        AND u.membership != 'Standard'
+        AND YEAR(p.purchase_date) = 2023 
+        AND MONTH(p.purchase_date) = 11
+    GROUP BY week_of_month, u.membership
+)
+SELECT 
+    a.week_of_month, 
+    a.membership,
+    IFNULL(ps.total_amount, 0) AS total_amount
+FROM 
+    all_combinations a
+LEFT JOIN 
+    purchase_summary ps
+ON 
+    a.week_of_month = ps.week_of_month 
+    AND a.membership = ps.membership
+ORDER BY 
+    a.week_of_month, 
+    a.membership ASC;
+	
+	
+Problem: 1934. Confirmation Rate
+
+Intuition:
+This problem asks us to calculate the confirmation rate for each user. So we might
+want to denote the timeout action as 0 and confirmed action as 1. Then GROUP BY 
+user_id to solve the problem
+
+Approach:
+Firstly, we create the numerical column to represent timeout and confirmed action
+
+	SELECT *,
+		IF (action="confirmed", 1, 0) AS inx
+    FROM Confirmations
+	
+Then we join the two tables
+
+	SELECT *
+	FROM Signups s
+	LEFT JOIN (SUBQUERY) c
+	USING (user_id) 
+	GROUP BY s.user_id;
+
+Then we will use following statment to calculate confirmation rate
+
+	ROUND(SUM(IFNULL(c.inx, 0)) / COUNT(s.user_id), 2) AS confirmation_rate
+	
+Solution:
+SELECT s.user_id,
+	ROUND(SUM(IFNULL(c.inx, 0)) / COUNT(s.user_id), 2) AS confirmation_rate
+FROM Signups s
+LEFT JOIN (
+	SELECT *,
+		IF (action="confirmed", 1, 0) AS inx
+    FROM Confirmations
+) c
+USING (user_id) 
+	
 
 	
 	
