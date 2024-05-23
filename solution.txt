@@ -2275,6 +2275,137 @@ LEFT JOIN (
     FROM Confirmations
 ) c
 USING (user_id) 
+
+
+# Problem 2041. Accepted Candidates From the Interviews
+
+Intuition:
+There are several tasks we have to do, and we can do it step by step
+
+Approach:
+1. Find out candidate with at least two years of experiences
+
+	WHERE c.years_of_exp >= 2
+	
+2. For each candidate_id, find out their total score
+
+	GROUP BY c.candidate_id
+	SUM(c.candidate_id)
+	
+3. Find out candidates whose total score is greater than 15
+
+	HAVING SUM(score)>15;
+	
+Solution:
+SELECT c.candidate_id
+FROM Candidates c
+INNER JOIN Rounds as r
+USING (interview_id)
+WHERE c.years_of_exp >= 2
+GROUP BY c.candidate_id
+HAVING SUM(score)>15;
+
+
+# Problem 612. Shortest Distance in a Plane
+
+Intuition:
+The main idea in this problem is the concept of SELF JOIN and DENSE_RANK.
+To acquire the distance of every pair of points, we have to perform SELF JOIN.
+And to extract rows with distance>0, we have to use DENSE_RANK
+
+Approach:
+Firstly, we have to perform SELF JOIN
+
+	SELECT *
+	FROM Point2D p1
+	CROSS JOIN Point2D p2
+	
+Next, we have to calculate the distance for every pair of points by adding
+
+	ROUND(POWER(POWER((p1.x-p2.x), 2)+POWER((p1.y-p2.y),2), 0.5), 2) AS dist
+	
+Since the problem requires us to find the shortest path, we have to lable the 
+rank for each distance. Note that since there will be rank for dist=0, so we 
+have to use DENSE_RANK here. In that way, we can then extract the shortest distance
+by writing rnk=2
+
+	DENSE_RANK() OVER (ORDER BY POWER(POWER((p1.x-p2.x), 2)+POWER((p1.y-p2.y),2), 0.5) 
+	
+Then the following is trivial
+
+Solution:
+SELECT DISTINCT r.dist AS shortest FROM (
+	SELECT
+		ROUND(POWER(POWER((p1.x-p2.x), 2)+POWER((p1.y-p2.y),2), 0.5), 2) AS dist,
+		DENSE_RANK() OVER (ORDER BY POWER(POWER((p1.x-p2.x), 2)+POWER((p1.y-p2.y),2), 0.5) ASC) AS rnk
+	FROM Point2D p1
+	CROSS JOIN Point2D p2
+) r
+WHERE r.rnk=2;
+
+Modified Solution:
+SELECT ROUND(POWER(POWER((p1.x-p2.x), 2)+POWER((p1.y-p2.y),2), 0.5), 2) AS shortest
+FROM Point2D p1
+CROSS JOIN Point2D p2
+HAVING shortest != 0
+ORDER BY shortest ASC LIMIT 1;
+
+Modified Solution Explained:
+A more briliant syntax. Something worthwhile to notice is that HAVING and ORDER BY allows variables
+that is just created.
+
+
+Problem: 178. Rank Scores
+
+Intuition:
+Trivial
+
+Solution:
+SELECT score,
+	DENSE_RANK() OVER (ORDER BY score DESC) AS "rank"
+FROM Scores
+ORDER BY "rank" ASC;
+
+
+Problem: 1158. Market Analysis I
+
+Intuition:
+The main idea is straightforward: Filtering -> Grouping -> Counting
+
+Approach:
+Firstly, we have to join the Users and the Orders table. Before the JOIN operation,
+we have to first filter out the orders records in 2019 in Orders table as we need 
+to perform LEFT JOIN in the following.
+
+	SELECT *
+	FROM Users u
+	LEFT JOIN (
+		SELECT * FROM Orders
+		WHERE YEAR(order_date) = 2019
+	) o
+	ON u.user_id=o.buyer_id 
+	
+And next, our first intuition to count the number of orders is to use COUNT. However,
+since the user who didn't have orders as a buyer in 2019 should also appear as 0, we 
+have to use SUM instead. Therefore, we have to create a column that helps us count the
+results
+
+	SELECT *, 1 as inx FROM Orders
+	WHERE YEAR(order_date) = 2019
+	
+Then the following is straightforward
+
+Solution:
+SELECT u.user_id AS buyer_id, u.join_date,
+	SUM(IFNULL(o.inx, 0)) AS orders_in_2019
+FROM Users u
+LEFT JOIN (
+	SELECT *, 1 AS inx FROM Orders
+    WHERE YEAR(order_date) = 2019
+) o
+ON u.user_id=o.buyer_id 
+GROUP BY u.user_id, u.join_date;
+	
 	
 
 	

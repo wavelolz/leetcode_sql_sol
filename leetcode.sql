@@ -1821,3 +1821,126 @@ LEFT JOIN (
 ) c
 USING (user_id) 
 GROUP BY s.user_id;
+
+
+# Problem 2041
+DROP TABLE IF EXISTS Candidates;
+Create table If Not Exists Candidates (candidate_id int, name varchar(30), years_of_exp int, interview_id int);
+insert into Candidates (candidate_id, name, years_of_exp, interview_id) values ('11', 'Atticus', '1', '101');
+insert into Candidates (candidate_id, name, years_of_exp, interview_id) values ('9', 'Ruben', '6', '104');
+insert into Candidates (candidate_id, name, years_of_exp, interview_id) values ('6', 'Aliza', '10', '109');
+insert into Candidates (candidate_id, name, years_of_exp, interview_id) values ('8', 'Alfredo', '0', '107');
+
+DROP TABLE IF EXISTS Rounds;
+Create table If Not Exists Rounds (interview_id int, round_id int, score int);
+insert into Rounds (interview_id, round_id, score) values ('109', '3', '4');
+insert into Rounds (interview_id, round_id, score) values ('101', '2', '8');
+insert into Rounds (interview_id, round_id, score) values ('109', '4', '1');
+insert into Rounds (interview_id, round_id, score) values ('107', '1', '3');
+insert into Rounds (interview_id, round_id, score) values ('104', '3', '6');
+insert into Rounds (interview_id, round_id, score) values ('109', '1', '4');
+insert into Rounds (interview_id, round_id, score) values ('104', '4', '7');
+insert into Rounds (interview_id, round_id, score) values ('104', '1', '2');
+insert into Rounds (interview_id, round_id, score) values ('109', '2', '1');
+insert into Rounds (interview_id, round_id, score) values ('104', '2', '7');
+insert into Rounds (interview_id, round_id, score) values ('107', '2', '3');
+insert into Rounds (interview_id, round_id, score) values ('101', '1', '8');
+
+SELECT c.candidate_id
+FROM Candidates c
+INNER JOIN Rounds as r
+USING (interview_id)
+WHERE c.years_of_exp >= 2
+GROUP BY c.candidate_id
+HAVING SUM(score)>15;
+
+
+# Problem 612
+DROP TABLE IF EXISTS Point2D;
+Create Table If Not Exists Point2D (x int not null, y int not null);
+insert into Point2D (x, y) values ('-1', '-1');
+insert into Point2D (x, y) values ('0', '0');
+insert into Point2D (x, y) values ('-1', '-2');
+
+SELECT DISTINCT r.dist AS shortest FROM (
+	SELECT
+		ROUND(POWER(POWER((p1.x-p2.x), 2)+POWER((p1.y-p2.y),2), 0.5), 2) AS dist,
+		DENSE_RANK() OVER (ORDER BY POWER(POWER((p1.x-p2.x), 2)+POWER((p1.y-p2.y),2), 0.5) ASC) AS rnk
+	FROM Point2D p1
+	CROSS JOIN Point2D p2
+) r
+WHERE r.rnk=2;
+
+SELECT ROUND(POWER(POWER((p1.x-p2.x), 2)+POWER((p1.y-p2.y),2), 0.5), 2) AS shortest
+FROM Point2D p1
+CROSS JOIN Point2D p2
+HAVING shortest != 0
+ORDER BY shortest ASC LIMIT 1;
+
+
+# Problem 178
+DROP TABLE IF EXISTS Scores;
+Create table If Not Exists Scores (id int, score DECIMAL(3,2));
+insert into Scores (id, score) values ('1', '3.5');
+insert into Scores (id, score) values ('2', '3.65');
+insert into Scores (id, score) values ('3', '4.0');
+insert into Scores (id, score) values ('4', '3.85');
+insert into Scores (id, score) values ('5', '4.0');
+insert into Scores (id, score) values ('6', '3.65');
+
+SELECT score,
+	DENSE_RANK() OVER (ORDER BY score DESC) AS "rank"
+FROM Scores
+ORDER BY "rank" ASC;
+
+
+# Problem 1158
+DROP TABLE IF EXISTS Users;
+Create table If Not Exists Users (user_id int, join_date date, favorite_brand varchar(10));
+insert into Users (user_id, join_date, favorite_brand) values ('1', '2018-01-01', 'Lenovo');
+insert into Users (user_id, join_date, favorite_brand) values ('2', '2018-02-09', 'Samsung');
+insert into Users (user_id, join_date, favorite_brand) values ('3', '2018-01-19', 'LG');
+insert into Users (user_id, join_date, favorite_brand) values ('4', '2018-05-21', 'HP');
+
+DROP TABLE IF EXISTS Orders;
+Create table If Not Exists Orders (order_id int, order_date date, item_id int, buyer_id int, seller_id int);
+insert into Orders (order_id, order_date, item_id, buyer_id, seller_id) values ('1', '2019-08-01', '4', '1', '2');
+insert into Orders (order_id, order_date, item_id, buyer_id, seller_id) values ('2', '2018-08-02', '2', '1', '3');
+insert into Orders (order_id, order_date, item_id, buyer_id, seller_id) values ('3', '2019-08-03', '3', '2', '3');
+insert into Orders (order_id, order_date, item_id, buyer_id, seller_id) values ('4', '2018-08-04', '1', '4', '2');
+insert into Orders (order_id, order_date, item_id, buyer_id, seller_id) values ('5', '2018-08-04', '1', '3', '4');
+insert into Orders (order_id, order_date, item_id, buyer_id, seller_id) values ('6', '2019-08-05', '2', '2', '4');
+
+DROP TABLE IF EXISTS Items;
+Create table If Not Exists Items (item_id int, item_brand varchar(10));
+insert into Items (item_id, item_brand) values ('1', 'Samsung');
+insert into Items (item_id, item_brand) values ('2', 'Lenovo');
+insert into Items (item_id, item_brand) values ('3', 'LG');
+insert into Items (item_id, item_brand) values ('4', 'HP');
+
+SELECT u.user_id AS buyer_id, u.join_date,
+	SUM(IFNULL(o.inx, 0)) AS orders_in_2019
+FROM Users u
+LEFT JOIN (
+	SELECT *, 1 AS inx FROM Orders
+    WHERE YEAR(order_date) = 2019
+) o
+ON u.user_id=o.buyer_id 
+GROUP BY u.user_id, u.join_date;
+
+
+# Problem 2118
+DROP TABLE IF EXISTS Terms;
+Create table If Not Exists Terms (power int, factor int);
+insert into Terms (power, factor) values ('2', '1');
+insert into Terms (power, factor) values ('1', '-4');
+insert into Terms (power, factor) values ('0', '2');
+
+WITH RECURSIVE t AS (
+	SELECT power, CONCAT("X^", power) AS x, 1 AS inx FROM Terms
+    UNION ALL 
+	SELECT power, CONCAT(x, power) AS x, inx+1 AS inx
+    FROM t
+    WHERE inx<(SELECT ROW_NUMBER() OVER (ORDER BY power DESC) AS rown FROM Terms ORDER BY rown DESC LIMIT 1)
+)
+SELECT * FROM t
