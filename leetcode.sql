@@ -1929,18 +1929,81 @@ ON u.user_id=o.buyer_id
 GROUP BY u.user_id, u.join_date;
 
 
-# Problem 2118
-DROP TABLE IF EXISTS Terms;
-Create table If Not Exists Terms (power int, factor int);
-insert into Terms (power, factor) values ('2', '1');
-insert into Terms (power, factor) values ('1', '-4');
-insert into Terms (power, factor) values ('0', '2');
+# Problem 615
+DROP TABLE IF EXISTS Salary;
+Create table If Not Exists Salary (id int, employee_id int, amount int, pay_date date);
+insert into Salary (id, employee_id, amount, pay_date) values ('1', '1', '9000', '2017/03/31');
+insert into Salary (id, employee_id, amount, pay_date) values ('2', '2', '6000', '2017/03/31');
+insert into Salary (id, employee_id, amount, pay_date) values ('3', '3', '10000', '2017/03/31');
+insert into Salary (id, employee_id, amount, pay_date) values ('4', '1', '7000', '2017/02/28');
+insert into Salary (id, employee_id, amount, pay_date) values ('5', '2', '6000', '2017/02/28');
+insert into Salary (id, employee_id, amount, pay_date) values ('6', '3', '8000', '2017/02/28');
 
-WITH RECURSIVE t AS (
-	SELECT power, CONCAT("X^", power) AS x, 1 AS inx FROM Terms
-    UNION ALL 
-	SELECT power, CONCAT(x, power) AS x, inx+1 AS inx
-    FROM t
-    WHERE inx<(SELECT ROW_NUMBER() OVER (ORDER BY power DESC) AS rown FROM Terms ORDER BY rown DESC LIMIT 1)
+DROP TABLE IF EXISTS Employee;
+Create table If Not Exists Employee (employee_id int, department_id int);
+insert into Employee (employee_id, department_id) values ('1', '1');
+insert into Employee (employee_id, department_id) values ('2', '2');
+insert into Employee (employee_id, department_id) values ('3', '2');
+
+
+WITH company AS (
+	SELECT LEFT(pay_date, 7) AS month,
+	AVG(amount) AS avg_company
+	FROM Salary
+	GROUP BY month
+),
+department AS (
+SELECT LEFT(s.pay_date, 7) AS month,
+	e.department_id,
+    AVG(s.amount) AS avg_dep
+FROM Salary s
+INNER JOIN Employee e
+USING (employee_id)
+GROUP BY month, e.department_id 
 )
-SELECT * FROM t
+SELECT c.month AS pay_month, d.department_id,
+	CASE
+		WHEN d.avg_dep>c.avg_company THEN "higher"
+        WHEN d.avg_dep<c.avg_company THEN "lower"
+        ELSE "same"
+    END comparison
+FROM company c
+INNER JOIN department d
+USING (month);
+
+
+# Problem 1098
+DROP TABLE IF EXISTS Books;
+Create table If Not Exists Books (book_id int, name varchar(50), available_from date);
+insert into Books (book_id, name, available_from) values ('1', 'Kalila And Demna', '2010-01-01');
+insert into Books (book_id, name, available_from) values ('2', '28 Letters', '2012-05-12');
+insert into Books (book_id, name, available_from) values ('3', 'The Hobbit', '2019-06-10');
+insert into Books (book_id, name, available_from) values ('4', '13 Reasons Why', '2019-06-01');
+insert into Books (book_id, name, available_from) values ('5', 'The Hunger Games', '2008-09-21');
+
+DROP TABLE IF EXISTS Orders;
+Create table If Not Exists Orders (order_id int, book_id int, quantity int, dispatch_date date);
+insert into Orders (order_id, book_id, quantity, dispatch_date) values ('1', '1', '2', '2018-07-26');
+insert into Orders (order_id, book_id, quantity, dispatch_date) values ('2', '1', '1', '2018-11-05');
+insert into Orders (order_id, book_id, quantity, dispatch_date) values ('3', '3', '8', '2019-06-11');
+insert into Orders (order_id, book_id, quantity, dispatch_date) values ('4', '4', '6', '2019-06-05');
+insert into Orders (order_id, book_id, quantity, dispatch_date) values ('5', '4', '5', '2019-06-20');
+insert into Orders (order_id, book_id, quantity, dispatch_date) values ('6', '5', '9', '2009-02-02');
+insert into Orders (order_id, book_id, quantity, dispatch_date) values ('7', '5', '8', '2010-04-13');
+
+SELECT b.book_id, b.name FROM Books b
+LEFT JOIN (
+	SELECT b.book_id,
+		SUM(o.quantity) AS total
+	FROM Books b
+	LEFT JOIN Orders o
+	USING (book_id)
+	WHERE b.available_from<'2019-05-23' AND o.dispatch_date>='2018-06-23' AND o.dispatch_date<='2019-06-23'
+	GROUP BY b.book_id
+) r
+USING (book_id)
+WHERE b.available_from<'2019-05-23' AND (r.total<10 OR r.total IS NULL);
+
+
+
+

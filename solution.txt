@@ -2405,7 +2405,110 @@ LEFT JOIN (
 ) o
 ON u.user_id=o.buyer_id 
 GROUP BY u.user_id, u.join_date;
+
+
+Problem: 615. Average Salary: Departments VS Company
+
+Intuition:
+The main idea is straightforward: Find out the average salary of each month for entire
+company and find out the average salary of each month for each department
+
+Approach:
+First, we'll find out the average salary of each month for entire company
+
+	SELECT LEFT(pay_date, 7) AS month,
+		AVG(amount) AS avg_company
+	FROM Salary
+	GROUP BY month
 	
+Next, we'll find out the average salary of each month for each department
+
+	SELECT LEFT(s.pay_date, 7) AS month,
+		e.department_id,
+		AVG(s.amount) AS avg_dep
+	FROM Salary s
+	INNER JOIN Employee e
+	USING (employee_id)
+	GROUP BY month, e.department_id 
+	
+The rest is straightforward: use the two tables that we've just created as CTE
+and join the tables. Use CASE WHEN to generate the answer
+
+Solution:
+WITH company AS (
+	SELECT LEFT(pay_date, 7) AS month,
+	AVG(amount) AS avg_company
+	FROM Salary
+	GROUP BY month
+),
+department AS (
+SELECT LEFT(s.pay_date, 7) AS month,
+	e.department_id,
+    AVG(s.amount) AS avg_dep
+FROM Salary s
+INNER JOIN Employee e
+USING (employee_id)
+GROUP BY month, e.department_id 
+)
+SELECT c.month AS pay_month, d.department_id,
+	CASE
+		WHEN d.avg_dep>c.avg_company THEN "higher"
+        WHEN d.avg_dep<c.avg_company THEN "lower"
+        ELSE "same"
+    END comparison
+FROM company c
+INNER JOIN department d
+USING (month);
+
+
+Problem: 1098. Unpopular Books
+
+Intuition:
+This problem includes different filtering to find out what we really want.
+My main idea is 
+	
+	1. Find books that we would count i.e. available date < "2019-05-23"
+	2. Find orders within the specific range
+	3. Count the total of orders
+	4. Filtering those books with amount<10 or amount=0 with previous step
+	
+Approach:
+Step1: Find books that we would count i.e. available date < "2019-05-23"
+
+	SELECT *
+	FROM Books b
+	LEFT JOIN Orders o
+	USING (book_id)
+	WHERE b.available_from<'2019-05-23' 
+	
+Step2: Find orders within the specific range
+	
+	WHERE b.available_from<'2019-05-23' AND o.dispatch_date>='2018-06-23' AND o.dispatch_date<='2019-06-23'
+	
+Step3: Count the total of orders
+
+	SUM(o.quantity) AS total
+	
+Step4:
+
+	SELECT b.book_id, b.name FROM Books b
+	LEFT JOIN (SUBQUERY) r
+	USING (book_id)
+	WHERE b.available_from<'2019-05-23' AND (r.total<10 OR r.total IS NULL);
+	
+Solution:
+SELECT b.book_id, b.name FROM Books b
+LEFT JOIN (
+	SELECT b.book_id,
+		SUM(o.quantity) AS total
+	FROM Books b
+	LEFT JOIN Orders o
+	USING (book_id)
+	WHERE b.available_from<'2019-05-23' AND o.dispatch_date>='2018-06-23' AND o.dispatch_date<='2019-06-23'
+	GROUP BY b.book_id
+) r
+USING (book_id)
+WHERE b.available_from<'2019-05-23' AND (r.total<10 OR r.total IS NULL);
 	
 
 	
