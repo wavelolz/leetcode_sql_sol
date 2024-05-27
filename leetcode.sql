@@ -2005,5 +2005,113 @@ USING (book_id)
 WHERE b.available_from<'2019-05-23' AND (r.total<10 OR r.total IS NULL);
 
 
+# Problem 1113
+DROP TABLE IF EXISTS Actions;
+Create table If Not Exists Actions (user_id int, post_id int, action_date date, action ENUM('view', 'like', 'reaction', 'comment', 'report', 'share'), extra varchar(10));
+insert into Actions (user_id, post_id, action_date, action, extra) values ('1', '1', '2019-07-01', 'view', 'None');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('1', '1', '2019-07-01', 'like', 'None');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('1', '1', '2019-07-01', 'share', 'None');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('2', '4', '2019-07-04', 'view', 'None');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('2', '4', '2019-07-04', 'report', 'spam');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('3', '4', '2019-07-04', 'view', 'None');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('3', '4', '2019-07-04', 'report', 'spam');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('4', '3', '2019-07-02', 'view', 'None');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('4', '3', '2019-07-02', 'report', 'spam');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('5', '2', '2019-07-04', 'view', 'None');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('5', '2', '2019-07-04', 'report', 'racism');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('5', '5', '2019-07-04', 'view', 'None');
+insert into Actions (user_id, post_id, action_date, action, extra) values ('5', '5', '2019-07-04', 'report', 'racism');
 
+SELECT a.extra AS report_reason,
+	COUNT(DISTINCT a.post_id) AS report_count
+FROM Actions a
+WHERE a.action_date="2019-07-04" AND a.action="report"
+GROUP BY a.extra;
+
+
+# Problem 1142
+DROP TABLE IF EXISTS Activity;
+Create table If Not Exists Activity (user_id int, session_id int, activity_date date, activity_type ENUM('open_session', 'end_session', 'scroll_down', 'send_message'));
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('1', '1', '2019-07-20', 'open_session');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('1', '1', '2019-07-20', 'scroll_down');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('1', '1', '2019-07-20', 'end_session');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('2', '4', '2019-07-20', 'open_session');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('2', '4', '2019-07-21', 'send_message');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('2', '4', '2019-07-21', 'end_session');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('3', '2', '2019-07-21', 'open_session');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('3', '2', '2019-07-21', 'send_message');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('3', '2', '2019-07-21', 'end_session');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('3', '5', '2019-07-21', 'open_session');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('3', '5', '2019-07-21', 'scroll_down');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('3', '5', '2019-07-21', 'end_session');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('4', '3', '2019-06-25', 'open_session');
+insert into Activity (user_id, session_id, activity_date, activity_type) values ('4', '3', '2019-06-25', 'end_session');
+
+SELECT 
+	ROUND(IFNULL(COUNT(DISTINCT session_id)/COUNT(DISTINCT user_id), 0), 2) AS average_sessions_per_user
+FROM Activity
+WHERE activity_date<="2019-07-27" AND activity_date>="2019-06-28";
+
+
+# Problem 1677
+DROP TABLE IF EXISTS Product;
+Create table If Not Exists Product(product_id int, name varchar(15));
+insert into Product (product_id, name) values ('0', 'ham');
+insert into Product (product_id, name) values ('1', 'bacon');
+
+DROP TABLE IF EXISTS Invoice;
+Create table If Not Exists Invoice(invoice_id int,product_id int,rest int, paid int, canceled int, refunded int);
+insert into Invoice (invoice_id, product_id, rest, paid, canceled, refunded) values ('23', '0', '2', '0', '5', '0');
+insert into Invoice (invoice_id, product_id, rest, paid, canceled, refunded) values ('12', '0', '0', '4', '0', '3');
+insert into Invoice (invoice_id, product_id, rest, paid, canceled, refunded) values ('1', '1', '1', '1', '0', '1');
+insert into Invoice (invoice_id, product_id, rest, paid, canceled, refunded) values ('2', '1', '1', '0', '1', '1');
+insert into Invoice (invoice_id, product_id, rest, paid, canceled, refunded) values ('3', '1', '0', '1', '1', '1');
+insert into Invoice (invoice_id, product_id, rest, paid, canceled, refunded) values ('4', '1', '1', '1', '1', '0');
+
+SELECT p.name,
+	IFNULL(SUM(i.rest), 0) AS rest, IFNULL(SUM(i.paid), 0) AS paid, IFNULL(SUM(i.canceled), 0) AS canceled, IFNULL(SUM(i.refunded), 0) AS refunded
+FROM Product p
+LEFT JOIN Invoice i
+USING (product_id)
+GROUP BY p.name 
+ORDER BY p.name;
+
+
+# Problem 1264
+DROP TABLE IF EXISTS Friendship;
+Create table If Not Exists Friendship (user1_id int, user2_id int);
+insert into Friendship (user1_id, user2_id) values ('1', '2');
+insert into Friendship (user1_id, user2_id) values ('1', '3');
+insert into Friendship (user1_id, user2_id) values ('1', '4');
+insert into Friendship (user1_id, user2_id) values ('2', '3');
+insert into Friendship (user1_id, user2_id) values ('2', '4');
+insert into Friendship (user1_id, user2_id) values ('2', '5');
+insert into Friendship (user1_id, user2_id) values ('6', '1');
+
+DROP TABLE IF EXISTS Likes;
+Create table If Not Exists Likes (user_id int, page_id int);
+insert into Likes (user_id, page_id) values ('1', '88');
+insert into Likes (user_id, page_id) values ('2', '23');
+insert into Likes (user_id, page_id) values ('3', '24');
+insert into Likes (user_id, page_id) values ('4', '56');
+insert into Likes (user_id, page_id) values ('5', '11');
+insert into Likes (user_id, page_id) values ('6', '33');
+insert into Likes (user_id, page_id) values ('2', '77');
+insert into Likes (user_id, page_id) values ('3', '77');
+insert into Likes (user_id, page_id) values ('6', '88');
+
+WITH friend AS (
+	SELECT * FROM Friendship
+	WHERE user1_id=1 OR user2_id=1
+	UNION ALL
+	SELECT user2_id, user1_id FROM Friendship
+	WHERE user1_id=1 OR user2_id=1
+),
+jointable AS (
+	SELECT * FROM friend f
+    INNER JOIN Likes l
+    ON f.user1_id=user_id
+)
+SELECT DISTINCT page_id AS recommended_page FROM jointable
+WHERE user1_id!=1 AND page_id NOT IN (SELECT DISTINCT page_id FROM jointable WHERE user1_id=1);
 

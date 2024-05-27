@@ -2509,6 +2509,101 @@ LEFT JOIN (
 ) r
 USING (book_id)
 WHERE b.available_from<'2019-05-23' AND (r.total<10 OR r.total IS NULL);
+
+
+Problem: 1113. Reported Posts
+
+Intuition:
+The problem says that we have to report the number of posts for each report reason. So note that 
+we have to use GROUP BY extra here. Now, we can count the number of distinct rows based on each 
+report reason.
+
+Solution:
+SELECT a.extra AS report_reason,
+	COUNT(DISTINCT a.post_id) AS report_count
+FROM Actions a
+WHERE a.action_date="2019-07-04" AND a.action="report"
+GROUP BY a.extra;
+
+
+Problem: 1142. User Activity for the Past 30 Days II
+
+Solution:
+SELECT 
+	ROUND(IFNULL(COUNT(DISTINCT session_id)/COUNT(DISTINCT user_id), 0), 2) AS average_sessions_per_user
+FROM Activity
+WHERE activity_date<="2019-07-27" AND activity_date>="2019-06-28";
+
+
+Problem: 1677. Product's Worth Over Invoices
+
+Intuition:
+straightforward
+
+Solution:
+SELECT p.name,
+	IFNULL(SUM(i.rest), 0) AS rest, IFNULL(SUM(i.paid), 0) AS paid, IFNULL(SUM(i.canceled), 0) AS canceled, IFNULL(SUM(i.refunded), 0) AS refunded
+FROM Product p
+LEFT JOIN Invoice i
+USING (product_id)
+GROUP BY p.name 
+ORDER BY p.name;
+
+
+Problem: 1264. Page Recommendations
+
+Intuition:
+There are three tasks we have to do
+	1. Find all the friends of user with user_id=1
+	2. Find the page_id of user with user_id=1 likes
+	3. Find all the page_id of friend of user with user_id=1 likes
+	4. Exclude the page_id that user with user_id=1 likes
+	
+Approach:
+To find out the friend of user with user_id=1, we can swap two columns and perform
+UNION ALL operation
+
+TABLE1
+	SELECT * FROM Friendship
+	WHERE user1_id=1 OR user2_id=1
+	UNION ALL
+	SELECT user2_id, user1_id FROM Friendship
+	WHERE user1_id=1 OR user2_id=1
+
+Next, we create a combined table for convenience
+
+TABLE2
+	SELECT * FROM TABLE1 f
+    INNER JOIN Likes l
+    ON f.user1_id=user_id
+
+Then, using TABLE2, we can filtering out all the page_id that friends of user with user_id=1
+likes. At this stage, we'll exclude user with user_id=1
+
+	SELECT DISTINCT page_id AS recommended_page FROM jointable
+	WHERE user1_id!=1
+	
+As some of the friends may like the page that user with user_id=1 already likes, we have 
+to exlude these pages
+
+	WHERE user1_id!=1 AND page_id NOT IN (SELECT DISTINCT page_id FROM jointable WHERE user1_id=1);
+	
+Solution:
+WITH friend AS (
+	SELECT * FROM Friendship
+	WHERE user1_id=1 OR user2_id=1
+	UNION ALL
+	SELECT user2_id, user1_id FROM Friendship
+	WHERE user1_id=1 OR user2_id=1
+),
+jointable AS (
+	SELECT * FROM friend f
+    INNER JOIN Likes l
+    ON f.user1_id=user_id
+)
+SELECT DISTINCT page_id AS recommended_page FROM jointable
+WHERE user1_id!=1 AND page_id NOT IN (SELECT DISTINCT page_id FROM jointable WHERE user1_id=1);
+
 	
 
 	
