@@ -2115,3 +2115,87 @@ jointable AS (
 SELECT DISTINCT page_id AS recommended_page FROM jointable
 WHERE user1_id!=1 AND page_id NOT IN (SELECT DISTINCT page_id FROM jointable WHERE user1_id=1);
 
+
+# Problem 2989
+DROP TABLE IF EXISTS Scores;
+Create Table if Not Exists Scores (student_id int, student_name varchar(40), assignment1 int,assignment2 int, assignment3 int);
+insert into Scores (student_id, student_name, assignment1, assignment2, assignment3) values ('309', 'Owen', '88', '47', '87');
+insert into Scores (student_id, student_name, assignment1, assignment2, assignment3) values ('321', 'Claire', '98', '95', '37');
+insert into Scores (student_id, student_name, assignment1, assignment2, assignment3) values ('338', 'Julian', '100', '64', '43');
+insert into Scores (student_id, student_name, assignment1, assignment2, assignment3) values ('423', 'Peyton', '60', '44', '47');
+insert into Scores (student_id, student_name, assignment1, assignment2, assignment3) values ('896', 'David', '32', '37', '50');
+insert into Scores (student_id, student_name, assignment1, assignment2, assignment3) values ('235', 'Camila', '31', '53', '69');
+
+WITH result AS (
+	SELECT
+		assignment1+assignment2+assignment3 AS total,
+		ROW_NUMBER() OVER (ORDER BY assignment1+assignment2+assignment3 ASC) AS lowest,
+		ROW_NUMBER() OVER (ORDER BY assignment1+assignment2+assignment3 DESC) AS highest
+	FROM Scores
+)
+SELECT 
+	SUM(CASE
+		WHEN highest=1 THEN total
+        WHEN lowest=1 THEN -total
+        ELSE 0
+    END) AS difference_in_score
+FROM result;
+
+
+# Problem 2066
+DROP TABLE IF EXISTS Transactions;
+Create table If Not Exists Transactions (account_id int, day date, type ENUM('Deposit', 'Withdraw'), amount int);
+insert into Transactions (account_id, day, type, amount) values ('1', '2021-11-07', 'Deposit', '2000');
+insert into Transactions (account_id, day, type, amount) values ('1', '2021-11-09', 'Withdraw', '1000');
+insert into Transactions (account_id, day, type, amount) values ('1', '2021-11-11', 'Deposit', '3000');
+insert into Transactions (account_id, day, type, amount) values ('2', '2021-12-07', 'Deposit', '7000');
+insert into Transactions (account_id, day, type, amount) values ('2', '2021-12-12', 'Withdraw', '7000');
+
+SELECT account_id, day,
+	SUM(sumcol) OVER (PARTITION BY account_id ORDER BY day ASC) AS balance
+FROM (
+	SELECT account_id, day, 
+		IF(type="Deposit", amount, -amount) AS sumcol
+	FROM Transactions
+) r
+ORDER BY account_id ASC, day ASC;
+
+
+# Problem 1596
+DROP TABLE IF EXISTS Customers;
+Create table If Not Exists Customers (customer_id int, name varchar(10));
+insert into Customers (customer_id, name) values ('1', 'Alice');
+insert into Customers (customer_id, name) values ('2', 'Bob');
+insert into Customers (customer_id, name) values ('3', 'Tom');
+insert into Customers (customer_id, name) values ('4', 'Jerry');
+insert into Customers (customer_id, name) values ('5', 'John');
+
+DROP TABLE IF EXISTS Orders;
+Create table If Not Exists Orders (order_id int, order_date date, customer_id int, product_id int);
+insert into Orders (order_id, order_date, customer_id, product_id) values ('1', '2020-07-31', '1', '1');
+insert into Orders (order_id, order_date, customer_id, product_id) values ('2', '2020-7-30', '2', '2');
+insert into Orders (order_id, order_date, customer_id, product_id) values ('3', '2020-08-29', '3', '3');
+insert into Orders (order_id, order_date, customer_id, product_id) values ('4', '2020-07-29', '4', '1');
+insert into Orders (order_id, order_date, customer_id, product_id) values ('5', '2020-06-10', '1', '2');
+insert into Orders (order_id, order_date, customer_id, product_id) values ('6', '2020-08-01', '2', '1');
+insert into Orders (order_id, order_date, customer_id, product_id) values ('7', '2020-08-01', '3', '3');
+insert into Orders (order_id, order_date, customer_id, product_id) values ('8', '2020-08-03', '1', '2');
+insert into Orders (order_id, order_date, customer_id, product_id) values ('9', '2020-08-07', '2', '3');
+insert into Orders (order_id, order_date, customer_id, product_id) values ('10', '2020-07-15', '1', '2');
+
+DROP TABLE IF EXISTS Products;
+Create table If Not Exists Products (product_id int, product_name varchar(20), price int);
+insert into Products (product_id, product_name, price) values ('1', 'keyboard', '120');
+insert into Products (product_id, product_name, price) values ('2', 'mouse', '80');
+insert into Products (product_id, product_name, price) values ('3', 'screen', '600');
+insert into Products (product_id, product_name, price) values ('4', 'hard disk', '450');
+
+SELECT r.customer_id, r.product_id, r.product_name FROM (
+	SELECT c.customer_id, p.product_name, p.product_id,
+		RANK() OVER (PARTITION BY o.customer_id ORDER BY COUNT(p.product_name) DESC) AS rnk
+	FROM Customers c, Orders o, Products p
+	WHERE c.customer_id=o.customer_id AND o.product_id=p.product_id
+	GROUP BY o.customer_id, p.product_id, p.product_name
+) r
+WHERE r.rnk=1;
+

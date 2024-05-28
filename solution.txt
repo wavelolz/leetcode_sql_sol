@@ -2604,6 +2604,127 @@ jointable AS (
 SELECT DISTINCT page_id AS recommended_page FROM jointable
 WHERE user1_id!=1 AND page_id NOT IN (SELECT DISTINCT page_id FROM jointable WHERE user1_id=1);
 
+
+Problem: 2989. Class Performance
+
+Intuition:
+My main idea is to use RANK with ascending order and descending order. However, if we encounter
+the situation that there are two people who have same highest score, then this method would fail.
+Therefore, we switch to ROW_NUMBER to ensure that there exist only one highest and lowest score
+
+Approach:
+First, we find out the rank with ascending order and descending order
+
+	SELECT
+		assignment1+assignment2+assignment3 AS total,
+		ROW_NUMBER() OVER (ORDER BY assignment1+assignment2+assignment3 ASC) AS lowest,
+		ROW_NUMBER() OVER (ORDER BY assignment1+assignment2+assignment3 DESC) AS highest
+	FROM Scores
+	
+Next, using this query, we can then filterout the desire output we want and calculate the result
+
+	SELECT 
+	SUM(CASE
+		WHEN highest=1 THEN total
+        WHEN lowest=1 THEN -total
+        ELSE 0
+    END) AS difference_in_score
+	FROM SUBQUERY;
+	
+Solution:
+WITH result AS (
+	SELECT
+		assignment1+assignment2+assignment3 AS total,
+		ROW_NUMBER() OVER (ORDER BY assignment1+assignment2+assignment3 ASC) AS lowest,
+		ROW_NUMBER() OVER (ORDER BY assignment1+assignment2+assignment3 DESC) AS highest
+	FROM Scores
+)
+SELECT 
+	SUM(CASE
+		WHEN highest=1 THEN total
+        WHEN lowest=1 THEN -total
+        ELSE 0
+    END) AS difference_in_score
+FROM result;
+
+Modified Solution:
+SELECT (
+    MAX(assignment1 + assignment2 + assignment3)
+    - MIN(assignment1 + assignment2 + assignment3)
+ ) AS difference_in_score
+FROM Scores
+
+Modified Solution Explained:
+That's it
+
+
+Problem: 2066. Account Balance
+
+Intuition:
+It actually requires us to calculate the cumulative sum of every transaction but positive 
+value for deposit and negative value for withdrawl
+
+Approach
+We can first create a column as the one to perform cumulative sum
+
+	SELECT account_id, day, 
+		IF(type="Deposit", amount, -amount) AS sumcol
+	FROM Transactions
+
+Then, instead of using variables, we can simply use SUM() OVER to perform cumulative sum
+
+	SUM(sumcol) OVER (PARTITION BY account_id ORDER BY day ASC) AS balance
+	
+	
+Solution:
+SELECT account_id, day,
+	SUM(sumcol) OVER (PARTITION BY account_id ORDER BY day ASC) AS balance
+FROM (
+	SELECT account_id, day, 
+		IF(type="Deposit", amount, -amount) AS sumcol
+	FROM Transactions
+) r
+ORDER BY account_id ASC, day ASC;
+
+
+Problem: 1596. The Most Frequently Ordered Products for Each Customer
+
+Intuition:
+After combining all of the three tables, we have to count the numbers of each product ordered
+by each customer. Then, with these numbers, we can then extract the most frequently
+ordered products for each customer
+
+Approach:
+Firstly, let's combining all the tables
+
+	SELECT *
+	FROM Customers c, Orders o, Products p
+	WHERE c.customer_id=o.customer_id AND o.product_id=p.product_id
+	
+Then, to count the numbers of each product ordered by each customer, we would go with
+
+	SELECT c.customer_id, p.product_name, p.product_id,
+		COUNT(p.product_name)
+	FROM Customers c, Orders o, Products p
+	WHERE c.customer_id=o.customer_id AND o.product_id=p.product_id
+	GROUP BY o.customer_id, p.product_id, p.product_name
+
+And the next thing would be to find out product that ordered the most
+
+	RANK() OVER (PARTITION BY o.customer_id ORDER BY COUNT(p.product_name) DESC) AS rnk
+	
+Then we can filter rows with rnk=1. That's it
+
+Solution:
+SELECT r.customer_id, r.product_id, r.product_name FROM (
+	SELECT c.customer_id, p.product_name, p.product_id,
+		RANK() OVER (PARTITION BY o.customer_id ORDER BY COUNT(p.product_name) DESC) AS rnk
+	FROM Customers c, Orders o, Products p
+	WHERE c.customer_id=o.customer_id AND o.product_id=p.product_id
+	GROUP BY o.customer_id, p.product_id, p.product_name
+) r
+WHERE r.rnk=1;
+
 	
 
 	
