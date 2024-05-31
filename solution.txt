@@ -2725,6 +2725,144 @@ SELECT r.customer_id, r.product_id, r.product_name FROM (
 ) r
 WHERE r.rnk=1;
 
+
+Problem: 602. Friend Requests II: Who has the Most Friends
+
+Intuition:
+The main idea of this problem is that we have to combine two columns into one to count
+the occurrance of every unique value. UNION ALL is what we need
+
+Solution:
+WITH all_user AS (
+	SELECT requester_id AS id
+    FROM RequestAccepted
+    UNION ALL
+	SELECT accepter_id AS id
+    FROM RequestAccepted
+)
+SELECT id,
+	COUNT(*) AS num
+FROM all_user
+GROUP BY id
+ORDER BY COUNT(*) DESC LIMIT 1;
+
+
+Problem: 603. Consecutive Available Seats
+
+Intuition:
+To determine whether a seat is consecutive, there are three situations
+	1. At the beginning, then the last seat is unavailable and next seat is available
+	2. In the middle, both last and next seat are available
+	3. In the end, only last seat is available
+So we have to extract the condition of last seat and next seat for every seat
+
+Approach:
+We use LEAD to determine the condition of the seat "after" current seat, and LAG to determine
+the one "before" it
+
+	SELECT *,
+		IFNULL(LAG(free, 1) OVER(ORDER BY seat_id ASC), 0) AS lastrow,
+		IFNULL(LEAD(free, 1) OVER (ORDER BY seat_id ASC), 0) AS nextrow
+	FROM Cinema
+
+Now we can know that a seat is in consecutive status if it is available and one of its neighbor
+is available as well
+
+	SELECT r.seat_id FROM (SUBQUERY) r	
+	WHERE r.free=1 AND (r.lastrow=1 OR r.nextrow=1)
+	ORDER BY r.seat_id ASC;
+	
+Solution:
+SELECT r.seat_id FROM (
+	SELECT *,
+		IFNULL(LAG(free, 1) OVER(ORDER BY seat_id ASC), 0) AS lastrow,
+		IFNULL(LEAD(free, 1) OVER (ORDER BY seat_id ASC), 0) AS nextrow
+	FROM Cinema
+) r
+WHERE r.free=1 AND (r.lastrow=1 OR r.nextrow=1)
+ORDER BY r.seat_id ASC;
+
+Modified Solution:
+SELECT seat_id FROM Cinema
+WHERE free=1 AND (
+	seat_id-1 IN (SELECT seat_id FROM Cinema WHERE free=1)
+    OR
+    seat_id+1 IN (SELECT seat_id FROM Cinema WHERE free=1)
+);
+
+Modified Solution Explained:
+This solution use an alternative way to check the condition of its neighborhood, preventing
+the use of LEAD and LAG
+
+
+Problem: 1194. Tournament Winners
+
+Intuition:
+The main idea of this problem is how to calculate the records of both players in a single row.
+Here, we can use UNION ALL. Then we can use rank to find out who has the highest score within
+a group.
+
+Approach:
+Firstly, let's create a table containing two columns that has every score record for each
+player
+
+	WITH all_player AS (
+		SELECT first_player AS player, first_score AS score FROM Matches
+		UNION ALL
+		SELECT second_player AS player, second_score AS score FROM Matches
+	)
+	
+Then we can join this table with the Players table to get information regarding their group
+
+	SELECT *
+	FROM all_player ap
+	INNER JOIN Players p
+	ON ap.player=p.player_id
+	
+Next, to find out who is the winner for each group, we can use RANK. Note that for tie case,
+player with smaller player wins
+
+	RANK() OVER(PARTITION BY p.group_id ORDER BY SUM(ap.score) DESC, ap.player ASC)
+	
+Then we can filter player with rnk=1
+
+Solution:
+WITH all_player AS (
+	SELECT first_player AS player, first_score AS score FROM Matches
+	UNION ALL
+	SELECT second_player AS player, second_score AS score FROM Matches
+)
+SELECT r.group_id, r.player AS player_id FROM (
+	SELECT p.group_id, ap.player, 
+		RANK() OVER(PARTITION BY p.group_id ORDER BY SUM(ap.score) DESC, ap.player ASC) AS rnk
+	FROM all_player ap
+	INNER JOIN Players p
+	ON ap.player=p.player_id
+	GROUP BY p.group_id, ap.player
+) r
+WHERE r.rnk=1;
+
+Modified Solution:
+SELECT r.group_id, r.player_id FROM (
+	SELECT p.player_id, p.group_id,
+		RANK() OVER(PARTITION BY p.group_id ORDER BY 
+		SUM(CASE WHEN p.player_id=m.first_player THEN m.first_score ELSE m.second_score END) DESC, 
+		p.player_id ASC) AS rnk
+	FROM Players p
+	INNER JOIN Matches m
+	ON p.player_id in (m.first_player, m.second_player)
+	GROUP BY p.group_id, p.player_id
+) r
+WHERE r.rnk=1;
+
+Modified Solution Explained:
+The main idea of this solution lies in the SUM part. Because we have group each player into summary
+rows, we can then perform SUM on them. When p.player_id=m.first_player, it means that the score of 
+the player is first_score, otherwise its score is second_score. Also, we can take a note on the 
+INNER JOIN operation. This join is performed such that p.player_id=m.first_player OR p.player_id=m.second_player
+
+
+
 	
 
 	

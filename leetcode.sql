@@ -2199,3 +2199,100 @@ SELECT r.customer_id, r.product_id, r.product_name FROM (
 ) r
 WHERE r.rnk=1;
 
+
+# Problem 602
+DROP TABLE IF EXISTS RequestAccepted;
+Create table If Not Exists RequestAccepted (requester_id int not null, accepter_id int null, accept_date date null);
+insert into RequestAccepted (requester_id, accepter_id, accept_date) values ('1', '2', '2016-06-03');
+insert into RequestAccepted (requester_id, accepter_id, accept_date) values ('1', '3', '2016-06-08');
+insert into RequestAccepted (requester_id, accepter_id, accept_date) values ('2', '3', '2016-06-08');
+insert into RequestAccepted (requester_id, accepter_id, accept_date) values ('3', '4', '2016-06-09');
+
+WITH all_user AS (
+	SELECT requester_id AS id
+    FROM RequestAccepted
+    UNION ALL
+	SELECT accepter_id AS id
+    FROM RequestAccepted
+)
+SELECT id,
+	COUNT(*) AS num
+FROM all_user
+GROUP BY id
+ORDER BY COUNT(*) DESC LIMIT 1;
+
+
+# Problem 603
+DROP TABLE IF EXISTS Cinema;
+Create table If Not Exists Cinema (seat_id int primary key auto_increment, free bool);
+insert into Cinema (seat_id, free) values ('1', '1');
+insert into Cinema (seat_id, free) values ('2', '0');
+insert into Cinema (seat_id, free) values ('3', '1');
+insert into Cinema (seat_id, free) values ('4', '1');
+insert into Cinema (seat_id, free) values ('5', '1');
+
+SELECT r.seat_id FROM (
+	SELECT *,
+		IFNULL(LAG(free, 1) OVER(ORDER BY seat_id ASC), 0) AS lastrow,
+		IFNULL(LEAD(free, 1) OVER (ORDER BY seat_id ASC), 0) AS nextrow
+	FROM Cinema
+) r
+WHERE r.free=1 AND (r.lastrow=1 OR r.nextrow=1)
+ORDER BY r.seat_id ASC;
+
+SELECT seat_id FROM Cinema
+WHERE free=1 AND (
+	seat_id-1 IN (SELECT seat_id FROM Cinema WHERE free=1)
+    OR
+    seat_id+1 IN (SELECT seat_id FROM Cinema WHERE free=1)
+);
+
+
+# Problem 1194
+DROP TABLE IF EXISTS Players;
+Create table If Not Exists Players (player_id int, group_id int);
+insert into Players (player_id, group_id) values ('10', '2');
+insert into Players (player_id, group_id) values ('15', '1');
+insert into Players (player_id, group_id) values ('20', '3');
+insert into Players (player_id, group_id) values ('25', '1');
+insert into Players (player_id, group_id) values ('30', '1');
+insert into Players (player_id, group_id) values ('35', '2');
+insert into Players (player_id, group_id) values ('40', '3');
+insert into Players (player_id, group_id) values ('45', '1');
+insert into Players (player_id, group_id) values ('50', '2');
+
+DROP TABLE IF EXISTS Matches;
+Create table If Not Exists Matches (match_id int, first_player int, second_player int, first_score int, second_score int);
+insert into Matches (match_id, first_player, second_player, first_score, second_score) values ('1', '15', '45', '3', '0');
+insert into Matches (match_id, first_player, second_player, first_score, second_score) values ('2', '30', '25', '1', '2');
+insert into Matches (match_id, first_player, second_player, first_score, second_score) values ('3', '30', '15', '2', '0');
+insert into Matches (match_id, first_player, second_player, first_score, second_score) values ('4', '40', '20', '5', '2');
+insert into Matches (match_id, first_player, second_player, first_score, second_score) values ('5', '35', '50', '1', '1');
+
+WITH all_player AS (
+	SELECT first_player AS player, first_score AS score FROM Matches
+	UNION ALL
+	SELECT second_player AS player, second_score AS score FROM Matches
+)
+SELECT r.group_id, r.player AS player_id FROM (
+	SELECT p.group_id, ap.player, 
+		RANK() OVER(PARTITION BY p.group_id ORDER BY SUM(ap.score) DESC, ap.player ASC) AS rnk
+	FROM all_player ap
+	INNER JOIN Players p
+	ON ap.player=p.player_id
+	GROUP BY p.group_id, ap.player
+) r
+WHERE r.rnk=1;
+
+SELECT r.group_id, r.player_id FROM (
+	SELECT p.player_id, p.group_id,
+		RANK() OVER(PARTITION BY p.group_id ORDER BY 
+		SUM(CASE WHEN p.player_id=m.first_player THEN m.first_score ELSE m.second_score END) DESC, 
+		p.player_id ASC) AS rnk
+	FROM Players p
+	INNER JOIN Matches m
+	ON p.player_id in (m.first_player, m.second_player)
+	GROUP BY p.group_id, p.player_id
+) r
+WHERE r.rnk=1;
+
